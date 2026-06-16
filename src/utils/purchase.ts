@@ -1,4 +1,6 @@
 import type { NumericLike } from "@/interfaces/entities/Purchase.interface";
+import type { Currency } from "@/interfaces/entities/Currency.interface";
+import type { ExchangeRate } from "@/interfaces/entities/ExchangeRate.interface";
 
 type BadgeTone =
   | "green"
@@ -8,14 +10,42 @@ type BadgeTone =
   | "secondary"
   | "accent";
 
-const currencyFormatter = new Intl.NumberFormat("es-CR", {
-  style: "currency",
-  currency: "CRC",
-  maximumFractionDigits: 2,
-});
+// --- Generic currency utilities ---
+
+export function formatInCurrency(amount: number, currency: Currency): string {
+  return new Intl.NumberFormat("es-CR", {
+    style: "currency",
+    currency: currency.currency_code,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+export function convertAmount(
+  raw: string | number,
+  fromCurrencyId: number,
+  toCurrencyId: number,
+  rates: ExchangeRate[],
+): number {
+  const amount = Number(raw);
+  if (fromCurrencyId === toCurrencyId || isNaN(amount)) return amount;
+  const rate = rates.find(
+    (r) =>
+      r.from_currency_id === fromCurrencyId &&
+      r.to_currency_id === toCurrencyId,
+  );
+  return rate ? amount * Number(rate.rate) : amount;
+}
+
+// Backward-compatible CRC formatter — delegates to formatInCurrency
+const CRC_CURRENCY: Currency = {
+  currency_id: 1,
+  currency_code: "CRC",
+  currency_name: "Colón Costarricense",
+  symbol: "₡",
+};
 
 export const formatCurrency = (value?: NumericLike | null) =>
-  currencyFormatter.format(Number(value ?? 0));
+  formatInCurrency(Number(value ?? 0), CRC_CURRENCY);
 
 export const formatDate = (value?: string | null) =>
   value ? new Date(value).toLocaleDateString("es-CR") : "—";

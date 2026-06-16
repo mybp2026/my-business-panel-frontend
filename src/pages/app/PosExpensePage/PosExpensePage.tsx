@@ -21,6 +21,7 @@ export function PosExpensePage() {
   const {
     branches,
     expenseTypes: initialTypes,
+    variableCategories,
     tenantId,
   } = useLoaderData() as PosExpensePageLoaderData;
   const { user } = useAuth();
@@ -160,10 +161,17 @@ export function PosExpensePage() {
     }
   };
 
-  const typeOptions = expenseTypes.map((t) => ({
-    value: t.expense_type_id,
-    label: t.expense_type_name,
-  }));
+  // Combinar tipos POS con categorías variables del catálogo contable
+  const typeOptions = [
+    ...expenseTypes.map((t) => ({
+      value: t.expense_type_id,
+      label: t.expense_type_name,
+    })),
+    ...variableCategories.map((c) => ({
+      value: `cat:${c.category_id}`,
+      label: `${c.name} (Finanzas)`,
+    })),
+  ];
 
   const branchOptions = branches.map((b) => ({
     value: b.branch_id,

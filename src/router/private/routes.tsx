@@ -60,6 +60,7 @@ import {
   getHrEmployeesPageData,
   getHrPayrollPageData,
 } from "@/router/loaders/hr.loaders";
+import { getFnzExpensePageData } from "@/router/loaders/fnzExpense.loaders";
 
 export const privateRoutes: RouteObject[] = [
   {
@@ -388,6 +389,16 @@ export const privateRoutes: RouteObject[] = [
                 "@/pages/app/AccountsOverviewPage/AccountsOverviewPage"
               );
               return { Component: AccountsOverviewPage };
+            },
+          },
+          {
+            path: "fnz/expenses",
+            loader: getFnzExpensePageData,
+            lazy: async () => {
+              const { FnzExpensePage } = await import(
+                "@/pages/app/FnzExpensePage/FnzExpensePage"
+              );
+              return { Component: FnzExpensePage };
             },
           },
           {
