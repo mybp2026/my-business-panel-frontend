@@ -1,9 +1,10 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Toast } from "@/components/ui/Toast";
-import { fnzExpenseApi } from "@/api/fnzExpense.api";
+import { ExpenseCategoryComboBox } from "@/components/ui/ExpenseCategoryComboBox";
+import { financesApi } from "@/api/finances.api";
 import type { Branch } from "@/interfaces/entities/Branch.interface";
 import type { Currency } from "@/interfaces/entities/Currency.interface";
 import type { ExpenseCategory } from "@/interfaces/entities/FnzExpense.interface";
@@ -21,7 +22,7 @@ interface Props {
 export function ExpenseRegistrationForm({
   tenantId,
   branches,
-  categories,
+  categories: _categories,
   currencies,
   userId,
   onSuccess,
@@ -31,6 +32,7 @@ export function ExpenseRegistrationForm({
 
   const [form, setForm] = useState({
     category_id: "",
+    category_name: "",
     branch_id: branches[0]?.branch_id ?? "",
     description: "",
     amount: "",
@@ -47,11 +49,6 @@ export function ExpenseRegistrationForm({
     mode: ToastMode;
     message: string;
   } | null>(null);
-
-  const categoryOptions = categories.map((c) => ({
-    value: c.category_id,
-    label: `${c.name} (${c.is_fixed ? "Fijo" : "Variable"})`,
-  }));
 
   const branchOptions = branches.map((b) => ({
     value: b.branch_id,
@@ -75,7 +72,7 @@ export function ExpenseRegistrationForm({
 
     setSubmitting(true);
     try {
-      await fnzExpenseApi.createExpense({
+      await financesApi.createExpense({
         tenant_id: tenantId,
         branch_id: form.branch_id,
         category_id: form.category_id,
@@ -89,7 +86,7 @@ export function ExpenseRegistrationForm({
         created_by: userId,
       });
       setToast({ mode: "success", message: "Gasto registrado correctamente" });
-      setForm((f) => ({ ...f, amount: "", description: "", category_id: "" }));
+      setForm((f) => ({ ...f, amount: "", description: "", category_id: "", category_name: "" }));
       onSuccess();
     } catch (err) {
       setToast({
@@ -111,12 +108,14 @@ export function ExpenseRegistrationForm({
         />
       )}
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <Select
-          label="Categoría"
+        <ExpenseCategoryComboBox
+          tenantId={tenantId}
+          label="Categoria"
           value={form.category_id}
-          onChange={(e) => setForm((f) => ({ ...f, category_id: e.target.value }))}
-          options={categoryOptions}
-          placeholder="Seleccionar categoría"
+          displayValue={form.category_name}
+          onChange={(id, name) =>
+            setForm((f) => ({ ...f, category_id: id, category_name: name }))
+          }
           required
         />
         <Select

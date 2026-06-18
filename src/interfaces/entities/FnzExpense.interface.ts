@@ -30,7 +30,7 @@ export interface ExpenseCategory {
   category_id: string;
   tenant_id: string;
   name: string;
-  account_code: string;
+  account_code: string | null;
   parent_category_id: string | null;
   is_fixed: boolean;
   is_active: boolean;
@@ -59,7 +59,7 @@ export interface CreateExpensePayload {
 export interface CreateExpenseCategoryPayload {
   tenant_id: string;
   name: string;
-  account_code: string;
+  account_code?: string;
   parent_category_id?: string;
   is_fixed: boolean;
 }

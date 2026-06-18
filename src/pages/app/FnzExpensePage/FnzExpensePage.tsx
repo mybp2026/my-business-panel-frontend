@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { useLoaderData } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { fnzExpenseApi } from "@/api/fnzExpense.api";
+import { financesApi } from "@/api/finances.api";
 import {
   TimeIntervalSelector,
   intervalToDates,
@@ -35,18 +35,20 @@ export function FnzExpensePage() {
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<ExpenseAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
 
   const loadAnalytics = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
+    setAnalyticsError(null);
     const { start, end } = intervalToDates(interval);
     try {
       const [fixedVsVariable, fixedBreakdown, variableBreakdown, salesVsExpenses] =
         await Promise.all([
-          fnzExpenseApi.getFixedVsVariable(tenantId, start, end),
-          fnzExpenseApi.getFixedBreakdown(tenantId, start, end),
-          fnzExpenseApi.getVariableBreakdown(tenantId, start, end),
-          fnzExpenseApi.getSalesVsExpenses(tenantId, start, end, selectedBranchId),
+          financesApi.getFixedVsVariable(tenantId, start, end),
+          financesApi.getFixedBreakdown(tenantId, start, end),
+          financesApi.getVariableBreakdown(tenantId, start, end),
+          financesApi.getSalesVsExpenses(tenantId, start, end, selectedBranchId),
         ]);
       setAnalytics({
         fixedVsVariable,
@@ -54,8 +56,8 @@ export function FnzExpensePage() {
         variableBreakdown,
         salesVsExpenses,
       });
-    } catch {
-      // Keep previous data on error
+    } catch (err) {
+      setAnalyticsError(err instanceof Error ? err.message : 'Error al cargar analíticos');
     } finally {
       setLoading(false);
     }
@@ -84,6 +86,11 @@ export function FnzExpensePage() {
 
   return (
     <div className="p-6 lg:p-8 flex flex-col gap-6">
+      {analyticsError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+          Error al cargar analíticos: {analyticsError}
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>

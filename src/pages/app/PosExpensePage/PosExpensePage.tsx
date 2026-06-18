@@ -1,36 +1,37 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useLoaderData } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 
 import { posExpenseApi } from "@/api/posExpense.api";
+import { financesApi } from "@/api/finances.api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Table } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
 import { Badge } from "@/components/ui/Badge";
+import { ExpenseCategoryComboBox } from "@/components/ui/ExpenseCategoryComboBox";
 
 import type { ToastMode } from "@/interfaces/components/ui/ToastProps.interface";
-import type {
-  Expense,
-  ExpenseType,
-} from "@/interfaces/entities/PosExpense.interface";
+import type { Expense } from "@/interfaces/entities/PosExpense.interface";
+import type { ExpenseCategory } from "@/interfaces/entities/FnzExpense.interface";
 import type { PosExpensePageLoaderData } from "@/router/loaders/posExpense.loaders";
 
 export function PosExpensePage() {
   const {
     branches,
-    expenseTypes: initialTypes,
-    variableCategories,
+    categories: initialCategories,
+    currencies,
     tenantId,
   } = useLoaderData() as PosExpensePageLoaderData;
   const { user } = useAuth();
-  const canCreateType = (user?.role.role_id ?? 4) < 4;
+  const canManageCategories = (user?.role.role_id ?? 4) < 4;
+  const crcCurrency = currencies.find((c) => c.currency_code === "CRC") ?? currencies[0];
 
   const [selectedBranchId, setSelectedBranchId] = useState(
     branches[0]?.branch_id ?? "",
   );
-  const [expenseTypes, setExpenseTypes] = useState<ExpenseType[]>(initialTypes);
+  const [categories, setCategories] = useState<ExpenseCategory[]>(initialCategories);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<{
@@ -39,16 +40,24 @@ export function PosExpensePage() {
   } | null>(null);
 
   // Create expense form
-  const [form, setForm] = useState({ expense_type_id: "", expense_amount: 0 });
+  const [form, setForm] = useState({
+    category_id: "",
+    category_name: "",
+    branch_id: branches[0]?.branch_id ?? "",
+    description: "",
+    amount: "",
+    payment_method: "CASH" as "CASH" | "BANK" | "CREDIT_CARD" | "CHECK" | "TRANSFER",
+    expense_date: new Date().toISOString().split("T")[0],
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Create type form
-  const [typeForm, setTypeForm] = useState({
-    expense_type_name: "",
-    expense_type_detail: "",
+  // Create category form
+  const [categoryForm, setCategoryForm] = useState({
+    name: "",
+    is_fixed: false,
   });
-  const [isCreatingType, setIsCreatingType] = useState(false);
-  const [showTypeForm, setShowTypeForm] = useState(false);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
 
   // Status actions state
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null);
@@ -79,17 +88,25 @@ export function PosExpensePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.expense_type_id || form.expense_amount <= 0) return;
+    const amount = parseFloat(form.amount);
+    if (!form.category_id || !form.branch_id || isNaN(amount) || amount <= 0) return;
     setIsSubmitting(true);
     try {
-      const created = await posExpenseApi.create({
-        expense_type_id: form.expense_type_id,
-        expense_amount: form.expense_amount,
-        branch_id: selectedBranchId,
+      await financesApi.createExpense({
+        tenant_id: tenantId,
+        branch_id: form.branch_id,
+        category_id: form.category_id,
+        description: form.description || undefined,
+        amount,
+        tax_amount: 0,
+        total_amount: amount,
+        currency_id: crcCurrency?.currency_id ?? 1,
+        expense_date: form.expense_date,
+        payment_method: form.payment_method,
+        created_by: user?.user_id,
       });
-      setExpenses((prev) => [created, ...prev]);
-      setForm({ expense_type_id: "", expense_amount: 0 });
-      setToast({ mode: "success", message: "Gasto registrado exitosamente" });
+      setForm((f) => ({ ...f, amount: "", description: "", category_id: "", category_name: "" }));
+      setToast({ mode: "success", message: "Gasto registrado correctamente" });
     } catch (err) {
       setToast({
         mode: "error",
@@ -101,28 +118,39 @@ export function PosExpensePage() {
     }
   };
 
-  const handleCreateType = async (e: React.FormEvent) => {
+  const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!typeForm.expense_type_name.trim()) return;
-    setIsCreatingType(true);
+    if (!categoryForm.name.trim()) return;
+    setIsCreatingCategory(true);
     try {
-      const created = await posExpenseApi.createType({
+      const categoryId = await financesApi.createCategory({
         tenant_id: tenantId,
-        expense_type_name: typeForm.expense_type_name.trim(),
-        expense_type_detail: typeForm.expense_type_detail.trim() || undefined,
+        name: categoryForm.name.trim(),
+        is_fixed: categoryForm.is_fixed,
       });
-      setExpenseTypes((prev) => [...prev, created]);
-      setTypeForm({ expense_type_name: "", expense_type_detail: "" });
-      setShowTypeForm(false);
-      setToast({ mode: "success", message: "Tipo de gasto creado" });
+      const newCategory: ExpenseCategory = {
+        category_id: categoryId,
+        tenant_id: tenantId,
+        name: categoryForm.name.trim(),
+        account_code: null,
+        parent_category_id: null,
+        is_fixed: categoryForm.is_fixed,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      setCategories((prev) => [...prev, newCategory]);
+      setCategoryForm({ name: "", is_fixed: false });
+      setShowCategoryForm(false);
+      setToast({ mode: "success", message: "Categoria creada" });
     } catch (err) {
       setToast({
         mode: "error",
         message:
-          err instanceof Error ? err.message : "Error al crear tipo de gasto",
+          err instanceof Error ? err.message : "Error al crear categoria",
       });
     } finally {
-      setIsCreatingType(false);
+      setIsCreatingCategory(false);
     }
   };
 
@@ -161,22 +189,18 @@ export function PosExpensePage() {
     }
   };
 
-  // Combinar tipos POS con categorías variables del catálogo contable
-  const typeOptions = [
-    ...expenseTypes.map((t) => ({
-      value: t.expense_type_id,
-      label: t.expense_type_name,
-    })),
-    ...variableCategories.map((c) => ({
-      value: `cat:${c.category_id}`,
-      label: `${c.name} (Finanzas)`,
-    })),
-  ];
-
   const branchOptions = branches.map((b) => ({
     value: b.branch_id,
     label: b.branch_name,
   }));
+
+  const paymentOptions = [
+    { value: "CASH", label: "Efectivo" },
+    { value: "BANK", label: "Transferencia bancaria" },
+    { value: "CREDIT_CARD", label: "Tarjeta de credito" },
+    { value: "CHECK", label: "Cheque" },
+    { value: "TRANSFER", label: "Transferencia" },
+  ];
 
   const isAdmin = (user?.role.role_id ?? 4) < 4;
   const isEmployee = user?.role.role_id === 4;
@@ -219,28 +243,63 @@ export function PosExpensePage() {
               Registrar gasto
             </h2>
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-              <Select
-                label="Tipo de gasto"
-                value={form.expense_type_id}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, expense_type_id: e.target.value }))
+              <ExpenseCategoryComboBox
+                tenantId={tenantId}
+                label="Categoria"
+                value={form.category_id}
+                displayValue={form.category_name}
+                onChange={(id, name) =>
+                  setForm((f) => ({ ...f, category_id: id, category_name: name }))
                 }
-                options={typeOptions}
-                placeholder="Seleccionar tipo"
+                required
+              />
+              <Select
+                label="Sucursal"
+                value={form.branch_id}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, branch_id: e.target.value }))
+                }
+                options={branchOptions}
                 required
               />
               <Input
-                label="Monto"
+                label="Descripcion (opcional)"
+                value={form.description}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, description: e.target.value }))
+                }
+                placeholder="Detalle del gasto"
+              />
+              <Input
+                label={`Monto (${crcCurrency?.symbol ?? "₡"})`}
                 type="number"
                 min={0.01}
                 step="0.01"
                 placeholder="0.00"
-                value={form.expense_amount || ""}
+                value={form.amount}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, amount: e.target.value }))
+                }
+                required
+              />
+              <Select
+                label="Metodo de pago"
+                value={form.payment_method}
                 onChange={(e) =>
                   setForm((f) => ({
                     ...f,
-                    expense_amount: parseFloat(e.target.value) || 0,
+                    payment_method: e.target.value as typeof form.payment_method,
                   }))
+                }
+                options={paymentOptions}
+                required
+              />
+              <Input
+                label="Fecha"
+                type="date"
+                value={form.expense_date}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, expense_date: e.target.value }))
                 }
                 required
               />
@@ -250,84 +309,93 @@ export function PosExpensePage() {
                 fullWidth
                 loading={isSubmitting}
                 disabled={
-                  !selectedBranchId ||
                   isSubmitting ||
-                  form.expense_amount <= 0 ||
-                  form.expense_type_id === ""
+                  !form.category_id ||
+                  !form.branch_id ||
+                  !form.amount
                 }
               >
-                {isEmployee ? "Solicitar gasto" : "Registrar gasto"}
+                Registrar gasto
               </Button>
             </form>
           </div>
 
-          {canCreateType && (
+          {canManageCategories && (
             <div className="bg-white rounded-2xl border border-gray-300 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-semibold text-gray-800">
-                  Tipos de gasto
+                  Categorias de gasto
                 </h2>
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
-                  onClick={() => setShowTypeForm((v) => !v)}
+                  onClick={() => setShowCategoryForm((v) => !v)}
                 >
-                  {showTypeForm ? "Cancelar" : "+ Nuevo tipo"}
+                  {showCategoryForm ? "Cancelar" : "+ Nueva"}
                 </Button>
               </div>
-              {showTypeForm && (
+              {showCategoryForm && (
                 <form
-                  onSubmit={handleCreateType}
-                  className="flex flex-col gap-3 mb-4"
+                  onSubmit={handleCreateCategory}
+                  className="flex flex-col gap-2 mb-4 p-3 bg-gray-50 rounded-xl"
                 >
                   <Input
                     label="Nombre"
-                    value={typeForm.expense_type_name}
+                    value={categoryForm.name}
                     onChange={(e) =>
-                      setTypeForm((f) => ({
-                        ...f,
-                        expense_type_name: e.target.value,
-                      }))
+                      setCategoryForm((f) => ({ ...f, name: e.target.value }))
                     }
+                    placeholder="Ej: Servicios publicos"
                     required
                   />
-                  <Input
-                    label="Detalle (opcional)"
-                    value={typeForm.expense_type_detail}
-                    onChange={(e) =>
-                      setTypeForm((f) => ({
-                        ...f,
-                        expense_type_detail: e.target.value,
-                      }))
-                    }
-                  />
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={categoryForm.is_fixed}
+                      onChange={(e) =>
+                        setCategoryForm((f) => ({
+                          ...f,
+                          is_fixed: e.target.checked,
+                        }))
+                      }
+                      className="rounded"
+                    />
+                    Gasto fijo
+                  </label>
                   <Button
                     type="submit"
                     variant="primary"
                     size="sm"
-                    loading={isCreatingType}
                     fullWidth
+                    loading={isCreatingCategory}
                   >
-                    Guardar tipo
+                    Guardar categoria
                   </Button>
                 </form>
               )}
-              <div className="flex flex-col gap-1">
-                {expenseTypes.length === 0 ? (
-                  <p className="text-sm text-gray-400">Sin tipos registrados</p>
+              <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+                {categories.length === 0 ? (
+                  <p className="text-sm text-gray-400">Sin categorias registradas</p>
                 ) : (
-                  expenseTypes.map((t) => (
+                  categories.map((c) => (
                     <div
-                      key={t.expense_type_id}
-                      className="text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2"
+                      key={c.category_id}
+                      className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"
                     >
-                      <span className="font-medium">{t.expense_type_name}</span>
-                      {t.expense_type_detail && (
-                        <span className="text-gray-400 ml-2 text-xs">
-                          {t.expense_type_detail}
+                      <div>
+                        <span className="text-sm font-medium text-gray-800">
+                          {c.name}
                         </span>
-                      )}
+                        {c.account_code && (
+                          <span className="text-xs text-gray-400 ml-2">
+                            {c.account_code}
+                          </span>
+                        )}
+                      </div>
+                      <Badge variant={c.is_fixed ? "red" : "yellow"}>
+                        {c.is_fixed ? "Fijo" : "Variable"}
+                      </Badge>
                     </div>
                   ))
                 )}

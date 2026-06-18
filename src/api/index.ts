@@ -43,4 +43,4 @@ export { purchaseApi } from "./purchase.api";
 export { specialCodeApi } from "./specialCode.api";
 export { currencyApi } from "./currency.api";
 export { exchangeRateApi } from "./exchangeRate.api";
-export { fnzExpenseApi } from "./fnzExpense.api";
+export { financesApi } from "./finances.api";

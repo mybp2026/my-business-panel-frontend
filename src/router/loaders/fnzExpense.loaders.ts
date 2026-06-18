@@ -1,6 +1,6 @@
-import { authApi } from "@/api/auth.api";
+﻿import { authApi } from "@/api/auth.api";
 import { branchApi } from "@/api/branch.api";
-import { fnzExpenseApi } from "@/api/fnzExpense.api";
+import { financesApi } from "@/api/finances.api";
 import { exchangeRateApi } from "@/api/exchangeRate.api";
 import { currencyApi } from "@/api/currency.api";
 
@@ -23,7 +23,7 @@ export async function getFnzExpensePageData(): Promise<FnzExpensePageLoaderData>
 
   const [branchRes, categories, currencies, exchangeRates] = await Promise.all([
     tenantId ? branchApi.listByTenant(tenantId, 1, 200) : Promise.resolve({ branches: [], total: 0, page: 1, limit: 200 }),
-    tenantId ? fnzExpenseApi.getCategories(tenantId) : Promise.resolve([]),
+    tenantId ? financesApi.getCategories(tenantId) : Promise.resolve([]),
     currencyApi.getAll(),
     exchangeRateApi.getAll(),
   ]);
