@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLoaderData } from "react-router-dom";
 
 import { conceptApi } from "@/api/concept.api";
@@ -32,6 +32,7 @@ import type {
 import type { HrPayrollPageLoaderData } from "@/router/loaders/hr.loaders";
 
 import { ConceptUpsertModal } from "./ConceptUpsertModal";
+import { PayrollConfirmModal } from "./PayrollConfirmModal";
 import { PaysheetDetailModal } from "./PaysheetDetailModal";
 import { employeeApi } from "@/api/employee.api";
 
@@ -40,6 +41,12 @@ const formatCurrency = (value: number) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+
+const formatDate = (raw: string) => {
+  const d = raw.slice(0, 10);
+  const [y, m, day] = d.split("-");
+  return `${day}/${m}/${y}`;
+};
 
 export function HRPayrollPage() {
   const {
@@ -59,6 +66,7 @@ export function HRPayrollPage() {
   const [createPaysheetBranchId, setCreatePaysheetBranchId] = useState(
     branches[0]?.branch_id ?? "",
   );
+  const [historyBranchId, setHistoryBranchId] = useState("");
   const [periodStart, setPeriodStart] = useState(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1)
       .toISOString()
@@ -71,6 +79,9 @@ export function HRPayrollPage() {
   );
   const [isCreatingPaysheet, setIsCreatingPaysheet] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [confirmPaysheet, setConfirmPaysheet] = useState<HrPaysheet | null>(
+    null,
+  );
   const [toast, setToast] = useState<{
     mode: ToastMode;
     message: string;
@@ -93,10 +104,38 @@ export function HRPayrollPage() {
     setConcepts(nextConcepts);
   };
 
-  const refreshPaysheets = async () => {
+  useEffect(() => {
+    if (initialConcepts.length === 0) {
+      conceptApi
+        .provisionDefaults()
+        .then((result) => {
+          if (result.created > 0) {
+            refreshConcepts();
+            setToast({ mode: "success", message: result.message });
+          }
+        })
+        .catch(() => {
+          // Si falla el aprovisionamiento, el usuario puede crear conceptos manualmente
+        });
+    }
+    // Solo en mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadPaysheets = (branchId: string) => {
     const tenantId = currentUser.tenant.tenant_id;
-    const nextPaysheets = await paysheetApi.listByTenant(tenantId);
-    setPaysheets(nextPaysheets);
+    return branchId
+      ? paysheetApi.listByBranch(branchId)
+      : paysheetApi.listByTenant(tenantId);
+  };
+
+  const refreshPaysheets = async () => {
+    setPaysheets(await loadPaysheets(historyBranchId));
+  };
+
+  const handleHistoryBranchChange = async (branchId: string) => {
+    setHistoryBranchId(branchId);
+    setPaysheets(await loadPaysheets(branchId));
   };
 
   const refreshEmployees = async () => {
@@ -144,6 +183,22 @@ export function HRPayrollPage() {
             : "No se pudo actualizar el concepto",
       });
       throw error;
+    }
+  };
+
+  const handleReactivateConcept = async (concept: HrPayrollConcept) => {
+    try {
+      await conceptApi.reactivate(concept.concept_id);
+      await refreshConcepts();
+      setToast({ mode: "success", message: "Concepto reactivado correctamente" });
+    } catch (error) {
+      setToast({
+        mode: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "No se pudo reactivar el concepto",
+      });
     }
   };
 
@@ -223,23 +278,26 @@ export function HRPayrollPage() {
     }
   };
 
-  const handleProcessPaysheet = async (paysheet: HrPaysheet) => {
-    if (!confirm("¿Procesar esta nómina ahora?")) return;
+  const handleOpenConfirmPaysheet = async (paysheet: HrPaysheet) => {
+    await refreshEmployees();
+    setConfirmPaysheet(paysheet);
+  };
 
-    setProcessingId(paysheet.paysheet_id);
+  const handleConfirmProcessPaysheet = async () => {
+    if (!confirmPaysheet) return;
+
+    setProcessingId(confirmPaysheet.paysheet_id);
 
     try {
-      await payrollApi.processPaysheet(paysheet.paysheet_id, {
-        branch_id: paysheet.branch_id,
-        tenant_id: paysheet.tenant_id,
-        period_start: paysheet.period_start,
-        period_end: paysheet.period_end,
+      await payrollApi.processPaysheet(confirmPaysheet.paysheet_id, {
+        branch_id: confirmPaysheet.branch_id,
+        tenant_id: confirmPaysheet.tenant_id,
+        period_start: confirmPaysheet.period_start,
+        period_end: confirmPaysheet.period_end,
       });
+      setConfirmPaysheet(null);
       await refreshPaysheets();
-      setToast({
-        mode: "success",
-        message: "Nómina procesada correctamente",
-      });
+      setToast({ mode: "success", message: "Nómina procesada correctamente" });
     } catch (error) {
       setToast({
         mode: "error",
@@ -276,13 +334,31 @@ export function HRPayrollPage() {
       key: "base_value",
       label: "Valor base",
       width: "14%",
-      render: (value: number | string) => formatCurrency(Number(value)),
+      render: (value: number | string, row: HrPayrollConcept) => {
+        const num = Number(value);
+        if (row.calculation_method === "percentage")
+          return `${(num * 100).toFixed(2)}%`;
+        if (row.calculation_method === "fixed") return formatCurrency(num);
+        if (row.calculation_method === "manual") return "—";
+        return String(value);
+      },
     },
     { key: "code", label: "Código", width: "10%" },
     {
+      key: "is_active",
+      label: "Estado",
+      width: "10%",
+      render: (value: boolean | undefined) =>
+        value === false ? (
+          <Badge variant="secondary">Inactivo</Badge>
+        ) : (
+          <Badge variant="green">Activo</Badge>
+        ),
+    },
+    {
       key: "actions",
       label: "Acciones",
-      width: "16%",
+      width: "14%",
       render: (_value: unknown, row: HrPayrollConcept) => (
         <div className="flex gap-2" onClick={(event) => event.stopPropagation()}>
           <Button
@@ -292,13 +368,23 @@ export function HRPayrollPage() {
           >
             <IconEdit />
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => handleSoftDeleteConcept(row)}
-          >
-            <IconCreditCard />
-          </Button>
+          {row.is_active === false ? (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => handleReactivateConcept(row)}
+            >
+              <IconPlus />
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => handleSoftDeleteConcept(row)}
+            >
+              <IconCreditCard />
+            </Button>
+          )}
           <Button
             type="button"
             variant="danger"
@@ -323,7 +409,7 @@ export function HRPayrollPage() {
       label: "Periodo",
       width: "22%",
       render: (_value: unknown, row: HrPaysheet) =>
-        `${row.period_start} → ${row.period_end}`,
+        `${formatDate(row.period_start)} → ${formatDate(row.period_end)}`,
     },
     {
       key: "total_earnings",
@@ -374,7 +460,7 @@ export function HRPayrollPage() {
             variant="primary"
             disabled={row.status_id === 2}
             loading={processingId === row.paysheet_id}
-            onClick={() => handleProcessPaysheet(row)}
+            onClick={() => handleOpenConfirmPaysheet(row)}
           >
             Procesar
           </Button>
@@ -442,16 +528,18 @@ export function HRPayrollPage() {
                 Ingresos y deducciones usados por el motor de cálculo.
               </p>
             </div>
-            <Button onClick={() => setSelectedConcept({} as HrPayrollConcept)}>
-              <IconPlus />
-              Nuevo concepto
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setSelectedConcept({} as HrPayrollConcept)}>
+                <IconPlus />
+                Nuevo concepto
+              </Button>
+            </div>
           </div>
 
           <Table
             columns={conceptColumns}
             data={concepts}
-            emptyMessage="No hay conceptos registrados"
+            emptyMessage="No hay conceptos registrados. Espere la carga automática o cree uno manualmente."
           />
         </div>
 
@@ -501,13 +589,29 @@ export function HRPayrollPage() {
       </div>
 
       <div className="rounded-2xl border border-gray-300 bg-white p-6">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Historial de nóminas
-          </h2>
-          <p className="text-sm text-gray-500">
-            Procese el periodo y consulte sus detalles por empleado.
-          </p>
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Historial de nóminas
+            </h2>
+            <p className="text-sm text-gray-500">
+              Procese el periodo y consulte sus detalles por empleado.
+            </p>
+          </div>
+          <div className="w-full sm:w-64">
+            <Select
+              label="Filtrar por sucursal"
+              value={historyBranchId}
+              onChange={(event) => handleHistoryBranchChange(event.target.value)}
+              options={[
+                { value: "", label: "Todas las sucursales" },
+                ...branches.map((branch) => ({
+                  value: branch.branch_id,
+                  label: branch.branch_name,
+                })),
+              ]}
+            />
+          </div>
         </div>
 
         <Table
@@ -524,6 +628,16 @@ export function HRPayrollPage() {
         onClose={() => setSelectedConcept(null)}
         onCreate={handleCreateConcept}
         onUpdate={handleUpdateConcept}
+      />
+
+      <PayrollConfirmModal
+        isOpen={confirmPaysheet !== null}
+        paysheet={confirmPaysheet}
+        employees={employees}
+        concepts={concepts}
+        isProcessing={processingId !== null}
+        onConfirm={handleConfirmProcessPaysheet}
+        onClose={() => setConfirmPaysheet(null)}
       />
 
       <PaysheetDetailModal

@@ -3,6 +3,7 @@ import { url } from ".";
 import type { ApiResponse } from "@/interfaces/api/ApiResponse.interface";
 import type {
   Promotion,
+  PromoAnalyticsRow,
   PromotionType,
 } from "@/interfaces/entities/Promotion.interface";
 import type { CreatePromotionRequest } from "@/interfaces/api/requests/CreatePromotionRequest.interface";
@@ -159,6 +160,32 @@ export const promotionApi = {
         error instanceof Error
           ? error.message
           : "Error al eliminar promoción",
+      );
+    }
+  },
+
+  async getAnalytics(
+    tenantId: string,
+    interval: string,
+    isActive?: boolean,
+    branchId?: string,
+  ): Promise<PromoAnalyticsRow[]> {
+    try {
+      const params = new URLSearchParams({ interval });
+      if (isActive !== undefined) params.set("isActive", String(isActive));
+      if (branchId) params.set("branchId", branchId);
+      const response = await fetch(
+        `${url}/promos/analytics/${tenantId}?${params.toString()}`,
+        { credentials: "include" },
+      );
+      const json = await response.json();
+      const data = unwrap<PromoAnalyticsRow[]>(json);
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : "Error al obtener analisis de promociones",
       );
     }
   },

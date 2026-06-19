@@ -16,6 +16,11 @@ import type {
   CreateExpensePayload,
   CreateExpenseCategoryPayload,
 } from "@/interfaces/entities/FnzExpense.interface";
+import type {
+  CashFlowData,
+  CashFlowGroupBy,
+  CashFlowProjectionsData,
+} from "@/interfaces/entities/CashFlow.interface";
 
 export const financesApi = {
   // --- CUENTAS POR PAGAR / COBRAR ---
@@ -138,6 +143,26 @@ export const financesApi = {
 
   async createExpense(data: CreateExpensePayload): Promise<{ expenseId: string }> {
     const res = await api.post<ApiResponse<{ expenseId: string }>>("/expense", data);
+    return res.data.data;
+  },
+
+  // --- FLUJO DE CAJA ---
+
+  async getCashFlow(params?: {
+    startDate?: string;
+    endDate?: string;
+    groupBy?: CashFlowGroupBy;
+  }): Promise<CashFlowData> {
+    const res = await api.get<ApiResponse<CashFlowData>>("/finances/cash-flow", {
+      params,
+    });
+    return res.data.data;
+  },
+
+  async getCashFlowProjections(): Promise<CashFlowProjectionsData> {
+    const res = await api.get<ApiResponse<CashFlowProjectionsData>>(
+      "/finances/cash-flow/projections",
+    );
     return res.data.data;
   },
 };

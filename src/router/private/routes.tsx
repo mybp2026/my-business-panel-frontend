@@ -36,6 +36,7 @@ import {
 import { getCashSessionsPageData } from "@/router/loaders/cashRegister.loaders";
 import { getRefundsPageData } from "@/router/loaders/returns.loaders";
 import { getPromotionsPageData } from "@/router/loaders/promotion.loaders";
+import { getPromotionsAnalyticsPageData } from "@/router/loaders/promotionsAnalytics.loaders";
 import { getPosExpensePageData } from "@/router/loaders/posExpense.loaders";
 import { getRoyaltiesPageData } from "@/router/loaders/royalties.loaders";
 import { getWarehousesPageData } from "@/router/loaders/warehouse.loaders";
@@ -54,6 +55,7 @@ import {
 } from "@/router/loaders/accounts-receivable.loaders";
 import { getAccountsOverviewPageData } from "@/router/loaders/finances.loaders";
 import { getProfitabilityPageData } from "@/router/loaders/profitability.loaders";
+import { getCashFlowPageData } from "@/router/loaders/cashFlow.loaders";
 import {
   getHrAmonestacionesPageData,
   getHrAttendancePageData,
@@ -381,6 +383,15 @@ export const privateRoutes: RouteObject[] = [
 
           // FNZ (Finances) Module
           {
+            path: "fnz/cash-flow",
+            loader: getCashFlowPageData,
+            lazy: async () => {
+              const { CashFlowPage } =
+                await import("@/pages/app/CashFlowPage/CashFlowPage");
+              return { Component: CashFlowPage };
+            },
+          },
+          {
             path: "fnz/accounts",
             loader: getAccountsOverviewPageData,
             lazy: async () => {
@@ -418,6 +429,16 @@ export const privateRoutes: RouteObject[] = [
           {
             path: "fnz/budgets",
             element: <ComingSoon title="FNZ - Presupuestos" />,
+          },
+          {
+            path: "fnz/promotions",
+            loader: getPromotionsAnalyticsPageData,
+            lazy: async () => {
+              const { PromotionsAnalyticsPage } = await import(
+                "@/pages/app/PromotionsAnalyticsPage/PromotionsAnalyticsPage"
+              );
+              return { Component: PromotionsAnalyticsPage };
+            },
           },
           {
             path: "fnz/analytics",

@@ -66,3 +66,35 @@ export interface Promotion {
   created_at?: string;
   updated_at?: string;
 }
+
+export type PromoInterval =
+  | "24h"
+  | "7d"
+  | "15d"
+  | "30d"
+  | "90d"
+  | "180d"
+  | "365d";
+
+export interface PromoAnalyticsRow {
+  promotion_id: string;
+  promotion_name: string;
+  promotion_code: string | null;
+  is_active: boolean;
+  promotion_type: string;
+  currency_id: number;
+  sale_count: string;
+  total_discount: string;
+  total_revenue: string;
+}
+
+export interface PromoAnalyticsSummary {
+  promotion_id: string;
+  promotion_name: string;
+  promotion_code: string | null;
+  is_active: boolean;
+  promotion_type: string;
+  sale_count: number;
+  total_discount: number;
+  total_revenue: number;
+}

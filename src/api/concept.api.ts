@@ -65,6 +65,33 @@ export const conceptApi = {
     return json.data;
   },
 
+  async provisionDefaults(): Promise<{ message: string; created: number }> {
+    const response = await fetch(`${url}/concept/provision`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      await buildError(response, "Error al cargar conceptos predeterminados");
+    }
+
+    const json: ApiResponse<{ message: string; created: number }> =
+      await response.json();
+    return json.data;
+  },
+
+  async reactivate(conceptId: number): Promise<void> {
+    const response = await fetch(`${url}/concept/${conceptId}/reactivate`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+    if (!response.ok) {
+      await buildError(response, "Error al reactivar concepto");
+    }
+  },
+
   async softDelete(conceptId: number): Promise<void> {
     const response = await fetch(`${url}/concept/${conceptId}/soft-delete`, {
       method: "PATCH",
