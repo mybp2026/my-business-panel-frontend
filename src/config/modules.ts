@@ -356,6 +356,12 @@ export const MODULES: Record<ModuleId, Module> = {
         rolesAllowed: [1, 2, 3],
       },
       {
+        id: "accounting",
+        label: "IVA",
+        path: "/app/fnz/accounting",
+        icon: "briefcase",
+      },
+      {
         id: "promotions",
         label: "Promociones y regalias",
         path: "/app/fnz/promotions",
