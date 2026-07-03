@@ -15,6 +15,7 @@ import {
   DEFAULT_PROMO_INTERVAL,
   PROMO_INTERVAL_OPTIONS,
 } from "@/constants/promotion";
+import { RoyaltyAnalyticsTab } from "./RoyaltyAnalyticsTab";
 
 import type { PromotionsAnalyticsLoaderData } from "@/router/loaders/promotionsAnalytics.loaders";
 import type {
@@ -106,9 +107,16 @@ function SortHeader({
 }
 
 export function PromotionsAnalyticsPage() {
-  const { rows: initialRows, currencies, exchangeRates, branches, tenantId } =
-    useLoaderData() as PromotionsAnalyticsLoaderData;
+  const {
+    rows: initialRows,
+    royalty,
+    currencies,
+    exchangeRates,
+    branches,
+    tenantId,
+  } = useLoaderData() as PromotionsAnalyticsLoaderData;
 
+  const [tab, setTab] = useState<"promociones" | "regalias">("promociones");
   const [rows, setRows] = useState<PromoAnalyticsRow[]>(initialRows);
   const [currentInterval, setCurrentInterval] = useState<PromoInterval>(
     DEFAULT_PROMO_INTERVAL,
@@ -222,16 +230,47 @@ export function PromotionsAnalyticsPage() {
               Finanzas
             </p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
-              Promociones
+              Promociones y regalias
             </h1>
             <p className="mt-2 text-sm leading-6 text-gray-600">
-              Impacto de descuentos por promocion, ventas generadas y efecto en
-              la rentabilidad del periodo seleccionado.
+              Impacto de descuentos por promocion y valor de la mercancia
+              entregada como regalia en el periodo seleccionado.
             </p>
           </div>
         </div>
       </section>
 
+      {/* Tabs */}
+      <div className="mb-6 flex gap-1 border-b border-gray-200">
+        {[
+          { id: "promociones" as const, label: "Promociones" },
+          { id: "regalias" as const, label: "Regalias" },
+        ].map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+              tab === t.id
+                ? "border-accent-600 text-accent-700"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "regalias" && (
+        <RoyaltyAnalyticsTab
+          initial={royalty}
+          branches={branches}
+          tenantId={tenantId}
+        />
+      )}
+
+      {tab === "promociones" && (
+        <>
       <section className="mb-6 flex flex-wrap items-end gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4">
         <div className="w-56">
           <p className="mb-1.5 text-sm font-medium text-gray-700">Intervalo</p>
@@ -419,6 +458,8 @@ export function PromotionsAnalyticsPage() {
           </table>
         </div>
       </section>
+        </>
+      )}
     </div>
   );
 }

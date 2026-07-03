@@ -55,6 +55,46 @@ export interface CreateExpensePayload {
   created_by?: string;
 }
 
+// Expense history row (GET /expense/history) — from accounting_schema.expense
+export interface ExpenseHistoryRow {
+  expense_id: string;
+  tenant_id: string;
+  branch_id: string;
+  branch_name: string;
+  category_id: string;
+  category_name: string;
+  account_code: string | null;
+  is_fixed: boolean;
+  description: string | null;
+  amount: string;
+  tax_amount: string;
+  total_amount: string;
+  currency_id: number;
+  expense_date: string;
+  payment_method: "CASH" | "BANK" | "CREDIT_CARD" | "CHECK" | "TRANSFER";
+  reference_number: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_by_email: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaginatedExpenses {
+  results: ExpenseHistoryRow[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface ExpenseHistoryParams {
+  branchId?: string | null;
+  start?: string | null;
+  end?: string | null;
+  page?: number;
+  limit?: number;
+}
+
 // Payload to create an expense category (POST /expense/categories)
 export interface CreateExpenseCategoryPayload {
   tenant_id: string;

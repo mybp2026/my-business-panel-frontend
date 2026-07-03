@@ -12,6 +12,7 @@ import { ExpenseBreakdownChart } from "./components/ExpenseBreakdownChart";
 import { SalesVsExpensesChart } from "./components/SalesVsExpensesChart";
 import { ExpenseRegistrationForm } from "./components/ExpenseRegistrationForm";
 import { CategoryManagementPanel } from "./components/CategoryManagementPanel";
+import { ExpenseHistoryTable } from "@/components/finances/ExpenseHistoryTable";
 import { formatInCurrency } from "@/utils/purchase";
 
 import type { TimeInterval } from "@/components/ui/TimeIntervalSelector";
@@ -36,6 +37,7 @@ export function FnzExpensePage() {
   const [analytics, setAnalytics] = useState<ExpenseAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+  const [historyRefresh, setHistoryRefresh] = useState(0);
 
   const loadAnalytics = useCallback(async () => {
     if (!tenantId) return;
@@ -65,6 +67,12 @@ export function FnzExpensePage() {
 
   useEffect(() => {
     loadAnalytics();
+  }, [loadAnalytics]);
+
+  // Tras registrar un gasto: recargar analiticos e historial.
+  const handleExpenseRegistered = useCallback(() => {
+    loadAnalytics();
+    setHistoryRefresh((n) => n + 1);
   }, [loadAnalytics]);
 
   const totalExpenses =
@@ -172,7 +180,22 @@ export function FnzExpensePage() {
         />
       </div>
 
-      {/* 4. Sección admin */}
+      {/* 4. Historial de gastos */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        <h2 className="text-base font-semibold text-gray-800 mb-1">
+          Historial de gastos
+        </h2>
+        <p className="text-xs text-gray-400 mb-4">
+          Registro paginado de egresos. Filtra por sucursal para reconsultar.
+        </p>
+        <ExpenseHistoryTable
+          branches={branches}
+          currencies={currencies}
+          refreshSignal={historyRefresh}
+        />
+      </div>
+
+      {/* 5. Sección admin */}
       {isAdmin && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
@@ -185,7 +208,7 @@ export function FnzExpensePage() {
               categories={categories}
               currencies={currencies}
               userId={user?.user_id}
-              onSuccess={loadAnalytics}
+              onSuccess={handleExpenseRegistered}
             />
           </div>
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
