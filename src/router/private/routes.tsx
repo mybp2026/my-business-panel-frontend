@@ -64,6 +64,7 @@ import {
   getHrPayrollPageData,
 } from "@/router/loaders/hr.loaders";
 import { getFnzExpensePageData } from "@/router/loaders/fnzExpense.loaders";
+import { getFnzIvaPageData } from "@/router/loaders/fnzIva.loaders";
 
 export const privateRoutes: RouteObject[] = [
   {
@@ -420,7 +421,13 @@ export const privateRoutes: RouteObject[] = [
           },
           {
             path: "fnz/accounting",
-            element: <ComingSoon title="FNZ - Contabilidad" />,
+            loader: getFnzIvaPageData,
+            lazy: async () => {
+              const { FnzIvaPage } = await import(
+                "@/pages/app/FnzIvaPage/FnzIvaPage"
+              );
+              return { Component: FnzIvaPage };
+            },
           },
           {
             path: "fnz/reports",
