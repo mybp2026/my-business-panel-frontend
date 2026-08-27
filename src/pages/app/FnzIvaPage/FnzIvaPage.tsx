@@ -44,9 +44,7 @@ function IvaStat({
       <p className="text-2xl font-bold">
         {loading ? <span className="animate-pulse">...</span> : value}
       </p>
-      {description && (
-        <p className="text-xs mt-1 opacity-60">{description}</p>
-      )}
+      {description && <p className="text-xs mt-1 opacity-60">{description}</p>}
     </div>
   );
 }
@@ -85,7 +83,12 @@ export function FnzIvaPage() {
 
   const convert = useCallback(
     (amount: number) =>
-      convertAmount(amount, CRC_CURRENCY_ID, displayCurrency.currency_id, exchangeRates),
+      convertAmount(
+        amount,
+        CRC_CURRENCY_ID,
+        displayCurrency.currency_id,
+        exchangeRates,
+      ),
     [displayCurrency, exchangeRates],
   );
 
@@ -102,7 +105,8 @@ export function FnzIvaPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">IVA del Período</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Desglose de impuesto al valor agregado para la declaración a Hacienda CR
+            Desglose de impuesto al valor agregado para la declaración a
+            Hacienda CR
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -123,14 +127,14 @@ export function FnzIvaPage() {
           label="IVA Débito (Ventas)"
           value={fmt(summary?.iva_debito ?? 0)}
           description="IVA cobrado en ventas con factura aceptada por Hacienda"
-          tone="blue"
+          tone="gray"
           loading={loading}
         />
         <IvaStat
           label="IVA Recuperable (Compras)"
           value={fmt(summary?.iva_recuperable ?? 0)}
           description="Crédito fiscal de compras (pagadas + CxP pendiente)"
-          tone="green"
+          tone="gray"
           loading={loading}
         />
         <IvaStat
@@ -148,14 +152,14 @@ export function FnzIvaPage() {
           label="IVA Crédito — Compras Pagadas"
           value={fmt(summary?.iva_credito ?? 0)}
           description="IVA de compras con factura y pago completados"
-          tone="green"
+          tone="gray"
           loading={loading}
         />
         <IvaStat
           label="IVA CxP — Pago Pendiente"
           value={fmt(summary?.iva_cxp ?? 0)}
           description="IVA acreditable de facturas recibidas con pago aún pendiente"
-          tone="yellow"
+          tone="gray"
           loading={loading}
         />
       </div>
@@ -163,9 +167,7 @@ export function FnzIvaPage() {
       {/* IVA Neto — tarjeta de resultado principal */}
       <div
         className={`rounded-2xl border-2 p-6 ${
-          isDebt
-            ? "bg-red-50 border-red-300"
-            : "bg-green-50 border-green-300"
+          isDebt ? "bg-red-50 border-red-300" : "bg-green-50 border-green-300"
         }`}
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -180,10 +182,7 @@ export function FnzIvaPage() {
             >
               {loading
                 ? "..."
-                : formatInCurrency(
-                    convert(Math.abs(ivaNeto)),
-                    displayCurrency,
-                  )}
+                : formatInCurrency(convert(Math.abs(ivaNeto)), displayCurrency)}
             </p>
             <p
               className={`text-sm mt-2 font-semibold ${
@@ -215,11 +214,11 @@ export function FnzIvaPage() {
                 {fmt(summary?.iva_recuperable ?? 0)}
               </span>
             </p>
-            <p className="text-gray-400 text-[10px]">
-              (Crédito compras + CxP)
-            </p>
+            <p className="text-gray-400 text-[10px]">(Crédito compras + CxP)</p>
             <hr className="border-gray-200 my-1" />
-            <p className={`font-semibold ${isDebt ? "text-red-600" : "text-green-600"}`}>
+            <p
+              className={`font-semibold ${isDebt ? "text-red-600" : "text-green-600"}`}
+            >
               Neto:{" "}
               {loading
                 ? "..."
@@ -235,7 +234,8 @@ export function FnzIvaPage() {
       {/* Disclaimer tipo de cambio */}
       {exchangeRates.length === 0 && currencies.length > 1 && (
         <p className="text-xs text-amber-600 text-center">
-          Sin tasas de cambio configuradas — los montos se muestran sin conversión.
+          Sin tasas de cambio configuradas — los montos se muestran sin
+          conversión.
         </p>
       )}
     </div>

@@ -37,7 +37,8 @@ export interface ReturnsComponentRow {
 export interface ExpenseComponentRow {
   branch_id: string;
   bucket_start: string;
-  amount_crc: string; // gastos en CRC
+  currency_id: number; // moneda del gasto
+  amount: string; // gastos en currency_id
 }
 
 // Respuesta cruda del endpoint GET /finances/profitability.

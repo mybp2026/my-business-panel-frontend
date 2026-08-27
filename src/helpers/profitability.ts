@@ -154,7 +154,7 @@ export function computeProfitability(
   }
 
   for (const row of raw.expenses) {
-    const expenses = toTarget(Number(row.amount_crc), CRC_CURRENCY_ID);
+    const expenses = toTarget(Number(row.amount), row.currency_id);
     for (const acc of [
       branchBucket(row.branch_id, row.bucket_start),
       generalBucket(row.bucket_start),

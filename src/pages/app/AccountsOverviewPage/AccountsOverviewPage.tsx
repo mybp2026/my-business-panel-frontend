@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLoaderData } from "react-router-dom";
 
 import { Badge } from "@/components/ui/Badge";
@@ -152,6 +152,7 @@ function computeAlertStatus(
 function useTableFilter<T>(
   initialRows: T[],
   fetchFn: (params: AccountListParams) => Promise<T[]>,
+  branchId: string,
 ) {
   const [rows, setRows] = useState(initialRows);
   const [loading, setLoading] = useState(false);
@@ -163,12 +164,29 @@ function useTableFilter<T>(
     setLoading(true);
     try {
       setRows(
-        await fetchFn({ status: s || undefined, sort_by: sb, sort_dir: sd }),
+        await fetchFn({
+          status: s || undefined,
+          sort_by: sb,
+          sort_dir: sd,
+          branchId: branchId || undefined,
+        }),
       );
     } finally {
       setLoading(false);
     }
   }
+
+  // El filtro de sucursal (page-level) re-consulta la lista. Se omite el primer
+  // render porque el loader ya trajo las filas iniciales.
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    void refetch(status, sortBy, sortDir);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchId]);
 
   return {
     rows,
@@ -335,9 +353,16 @@ function ModalHistorySection({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function AccountsOverviewPage() {
-  const { overview, currencies, exchangeRates, currentTenantName } =
-    useLoaderData() as AccountsOverviewPageLoaderData;
+  const {
+    overview: initialOverview,
+    branches,
+    currencies,
+    exchangeRates,
+    currentTenantName,
+  } = useLoaderData() as AccountsOverviewPageLoaderData;
 
+  const [overview, setOverview] = useState(initialOverview);
+  const [branchId, setBranchId] = useState("");
   const [selectedCurrencyId, setSelectedCurrencyId] = useState(CRC_CURRENCY_ID);
 
   // Modal state
@@ -353,9 +378,40 @@ export function AccountsOverviewPage() {
   >(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  // Table filter/sort — independent per table
-  const ap = useTableFilter(overview.payables, financesApi.getPayables);
-  const ar = useTableFilter(overview.receivables, financesApi.getReceivables);
+  // Table filter/sort — independent per table; el filtro de sucursal (page-level)
+  // relanza ambas listas.
+  const ap = useTableFilter(
+    initialOverview.payables,
+    financesApi.getPayables,
+    branchId,
+  );
+  const ar = useTableFilter(
+    initialOverview.receivables,
+    financesApi.getReceivables,
+    branchId,
+  );
+
+  // Al cambiar de sucursal, recargar el overview para que las tarjetas de totales
+  // reflejen el filtro (omitiendo el primer render: el loader ya trajo los datos).
+  const isFirstOverviewRender = useRef(true);
+  useEffect(() => {
+    if (isFirstOverviewRender.current) {
+      isFirstOverviewRender.current = false;
+      return;
+    }
+    let cancelled = false;
+    financesApi
+      .getAccountsOverview(branchId || null)
+      .then((data) => {
+        if (!cancelled) setOverview(data);
+      })
+      .catch(() => {
+        /* se conserva el overview previo si falla */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [branchId]);
 
   // Currency formatting
   const currencySymbol =
@@ -481,20 +537,46 @@ export function AccountsOverviewPage() {
         />
       </section>
 
-      {/* Currency toggle */}
-      {currencies.length > 1 && (
-        <section className="mb-6 flex items-center gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4">
-          <p className="text-sm font-medium text-gray-700">Mostrar montos en</p>
-          <div className="w-64">
-            <Select
-              value={String(selectedCurrencyId)}
-              onChange={(e) => setSelectedCurrencyId(Number(e.target.value))}
-              options={currencies.map((c) => ({
-                value: String(c.currency_id),
-                label: `${c.currency_code} — ${c.currency_name}`,
-              }))}
-            />
-          </div>
+      {/* Filtros: sucursal (re-fetch) + moneda (recalculo local) */}
+      {(branches.length > 1 || currencies.length > 1) && (
+        <section className="mb-6 flex flex-wrap items-end gap-6 rounded-2xl border border-gray-200 bg-white px-5 py-4">
+          {branches.length > 1 && (
+            <div>
+              <p className="mb-1.5 text-sm font-medium text-gray-700">
+                Sucursal
+              </p>
+              <div className="w-64">
+                <Select
+                  value={branchId}
+                  onChange={(e) => setBranchId(e.target.value)}
+                  options={[
+                    { value: "", label: "Todas las sucursales" },
+                    ...branches.map((b) => ({
+                      value: b.branch_id,
+                      label: b.branch_name,
+                    })),
+                  ]}
+                />
+              </div>
+            </div>
+          )}
+          {currencies.length > 1 && (
+            <div>
+              <p className="mb-1.5 text-sm font-medium text-gray-700">
+                Mostrar montos en
+              </p>
+              <div className="w-64">
+                <Select
+                  value={String(selectedCurrencyId)}
+                  onChange={(e) => setSelectedCurrencyId(Number(e.target.value))}
+                  options={currencies.map((c) => ({
+                    value: String(c.currency_id),
+                    label: `${c.currency_code} — ${c.currency_name}`,
+                  }))}
+                />
+              </div>
+            </div>
+          )}
         </section>
       )}
 

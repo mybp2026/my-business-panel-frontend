@@ -6,6 +6,10 @@ import type {
   RoyaltyOption,
   RoyaltyRule,
 } from "@/interfaces/entities/Royalty.interface";
+import type {
+  RoyaltyAnalytics,
+  RoyaltyInterval,
+} from "@/interfaces/entities/RoyaltyAnalytics.interface";
 
 const base = `${url}/pos-royalty`;
 
@@ -17,6 +21,23 @@ const checkResponse = (res: Response, body: unknown) => {
 };
 
 export const royaltyApi = {
+  // Analitica de regalias (mercancia obsequiada). Intervalo + sucursal se aplican
+  // en el backend (regla del repo: los filtros re-consultan).
+  async getAnalytics(
+    tenantId: string,
+    interval: RoyaltyInterval,
+    branchId?: string | null,
+  ): Promise<RoyaltyAnalytics> {
+    const params = new URLSearchParams({ interval });
+    if (branchId) params.set("branchId", branchId);
+    const res = await fetch(`${base}/analytics/${tenantId}?${params.toString()}`, {
+      credentials: "include",
+    });
+    const body = await res.json();
+    checkResponse(res, body);
+    return (body as ApiResponse<RoyaltyAnalytics>).data;
+  },
+
   async listRules(tenantId: string): Promise<RoyaltyRule[]> {
     const res = await fetch(`${base}/rules/${tenantId}`, {
       credentials: "include",

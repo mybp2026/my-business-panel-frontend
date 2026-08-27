@@ -59,6 +59,7 @@ export interface AccountListParams {
   status?: string;
   sort_by?: string;
   sort_dir?: string;
+  branchId?: string;
 }
 
 export interface PayablePayment {

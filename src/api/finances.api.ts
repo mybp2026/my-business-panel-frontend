@@ -15,6 +15,8 @@ import type {
   ExpenseCategory,
   CreateExpensePayload,
   CreateExpenseCategoryPayload,
+  ExpenseHistoryParams,
+  PaginatedExpenses,
 } from "@/interfaces/entities/FnzExpense.interface";
 import type {
   CashFlowData,
@@ -25,8 +27,13 @@ import type {
 export const financesApi = {
   // --- CUENTAS POR PAGAR / COBRAR ---
 
-  async getAccountsOverview(): Promise<AccountsOverviewData> {
-    const res = await api.get<ApiResponse<AccountsOverviewData>>("/finances/accounts");
+  async getAccountsOverview(
+    branchId?: string | null,
+  ): Promise<AccountsOverviewData> {
+    const res = await api.get<ApiResponse<AccountsOverviewData>>(
+      "/finances/accounts",
+      { params: branchId ? { branchId } : {} },
+    );
     return res.data.data;
   },
 
@@ -143,6 +150,26 @@ export const financesApi = {
 
   async createExpense(data: CreateExpensePayload): Promise<{ expenseId: string }> {
     const res = await api.post<ApiResponse<{ expenseId: string }>>("/expense", data);
+    return res.data.data;
+  },
+
+  // Historial de gastos paginado (tenant del session). El filtro de sucursal/fecha
+  // se aplica en el backend; aplicar un filtro relanza esta solicitud.
+  async getExpenseHistory(
+    params: ExpenseHistoryParams,
+  ): Promise<PaginatedExpenses> {
+    const res = await api.get<ApiResponse<PaginatedExpenses>>(
+      "/expense/history",
+      {
+        params: {
+          ...(params.branchId ? { branchId: params.branchId } : {}),
+          ...(params.start ? { start: params.start } : {}),
+          ...(params.end ? { end: params.end } : {}),
+          page: params.page ?? 1,
+          limit: params.limit ?? 20,
+        },
+      },
+    );
     return res.data.data;
   },
 

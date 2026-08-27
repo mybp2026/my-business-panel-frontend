@@ -84,26 +84,49 @@ function MarginChart({
 }
 
 export function ProfitabilityPage() {
-  const { raw: initialRaw, currencies, exchangeRates, currentTenantName } =
-    useLoaderData() as ProfitabilityPageLoaderData;
+  const {
+    raw: initialRaw,
+    branches,
+    currencies,
+    exchangeRates,
+    currentTenantName,
+  } = useLoaderData() as ProfitabilityPageLoaderData;
 
   const [raw, setRaw] = useState<ProfitabilityRawData>(initialRaw);
   const [interval, setInterval] = useState<ProfitabilityInterval>(
     initialRaw.interval ?? DEFAULT_PROFITABILITY_INTERVAL,
   );
+  const [selectedBranchId, setSelectedBranchId] = useState("");
   const [selectedCurrencyId, setSelectedCurrencyId] = useState(CRC_CURRENCY_ID);
   const [loading, setLoading] = useState(false);
 
-  // Cambio de intervalo -> re-fetch al backend (regla del repo: filtros re-consultan).
-  async function handleIntervalChange(value: string) {
-    const next = value as ProfitabilityInterval;
-    setInterval(next);
+  // Filtros (intervalo + sucursal) re-consultan al backend (regla del repo).
+  async function refetch(
+    nextInterval: ProfitabilityInterval,
+    nextBranchId: string,
+  ) {
     setLoading(true);
     try {
-      setRaw(await profitabilityApi.getProfitability(next));
+      setRaw(
+        await profitabilityApi.getProfitability(
+          nextInterval,
+          nextBranchId || null,
+        ),
+      );
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleIntervalChange(value: string) {
+    const next = value as ProfitabilityInterval;
+    setInterval(next);
+    void refetch(next, selectedBranchId);
+  }
+
+  function handleBranchChange(value: string) {
+    setSelectedBranchId(value);
+    void refetch(interval, value);
   }
 
   const currency =
@@ -153,13 +176,29 @@ export function ProfitabilityPage() {
           <p className="mb-1.5 text-sm font-medium text-gray-700">Intervalo</p>
           <Select
             value={interval}
-            onChange={(e) => void handleIntervalChange(e.target.value)}
+            onChange={(e) => handleIntervalChange(e.target.value)}
             options={PROFITABILITY_INTERVAL_OPTIONS.map((o) => ({
               value: o.value,
               label: o.label,
             }))}
           />
         </div>
+        {branches.length > 1 && (
+          <div className="w-64">
+            <p className="mb-1.5 text-sm font-medium text-gray-700">Sucursal</p>
+            <Select
+              value={selectedBranchId}
+              onChange={(e) => handleBranchChange(e.target.value)}
+              options={[
+                { value: "", label: "Todas las sucursales" },
+                ...branches.map((b) => ({
+                  value: b.branch_id,
+                  label: b.branch_name,
+                })),
+              ]}
+            />
+          </div>
+        )}
         {currencies.length > 1 && (
           <div className="w-64">
             <p className="mb-1.5 text-sm font-medium text-gray-700">

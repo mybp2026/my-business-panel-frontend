@@ -55,6 +55,7 @@ import {
 } from "@/router/loaders/accounts-receivable.loaders";
 import { getAccountsOverviewPageData } from "@/router/loaders/finances.loaders";
 import { getProfitabilityPageData } from "@/router/loaders/profitability.loaders";
+import { getLoyaltyFinancePageData } from "@/router/loaders/loyaltyFinance.loaders";
 import { getCashFlowPageData } from "@/router/loaders/cashFlow.loaders";
 import {
   getHrAmonestacionesPageData,
@@ -408,6 +409,16 @@ export const privateRoutes: RouteObject[] = [
               const { ProfitabilityPage } =
                 await import("@/pages/app/ProfitabilityPage/ProfitabilityPage");
               return { Component: ProfitabilityPage };
+            },
+          },
+          {
+            path: "fnz/loyalty-points",
+            loader: getLoyaltyFinancePageData,
+            lazy: async () => {
+              const { LoyaltyFinancePage } = await import(
+                "@/pages/app/LoyaltyFinancePage/LoyaltyFinancePage"
+              );
+              return { Component: LoyaltyFinancePage };
             },
           },
           {
