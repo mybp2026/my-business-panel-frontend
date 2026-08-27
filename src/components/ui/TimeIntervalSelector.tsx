@@ -35,8 +35,8 @@ export function intervalToDates(interval: TimeInterval): {
   const start = new Date();
   start.setDate(end.getDate() - INTERVAL_DAYS[interval]);
   return {
-    start: start.toISOString().split("T")[0],
-    end: end.toISOString().split("T")[0],
+    start: start.toISOString(),
+    end: end.toISOString(),
   };
 }
 

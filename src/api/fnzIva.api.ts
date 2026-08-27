@@ -1,4 +1,5 @@
 import api from "./api";
+import type { ApiResponse } from "@/interfaces/api/ApiResponse.interface";
 import type { IvaSummary } from "@/interfaces/entities/FnzIva.interface";
 
 export const fnzIvaApi = {
@@ -7,9 +8,12 @@ export const fnzIvaApi = {
     start: string,
     end: string,
   ): Promise<IvaSummary> {
-    const res = await api.get<IvaSummary>(`/iva/summary/${tenantId}`, {
-      params: { start, end },
-    });
-    return res.data;
+    const res = await api.get<ApiResponse<IvaSummary>>(
+      `/iva/summary/${tenantId}`,
+      {
+        params: { start, end },
+      },
+    );
+    return res.data.data;
   },
 };
