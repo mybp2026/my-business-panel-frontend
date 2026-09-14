@@ -361,6 +361,78 @@ export const privateRoutes: RouteObject[] = [
             },
           },
           {
+            path: "hr/parameters",
+            lazy: async () => {
+              const { HRParametersPage } = await import(
+                "@/pages/app/HRParametersPage/HRParametersPage"
+              );
+              return { Component: HRParametersPage };
+            },
+          },
+          {
+            path: "hr/overtime",
+            lazy: async () => {
+              const { HROvertimePage } = await import(
+                "@/pages/app/HROvertimePage/HROvertimePage"
+              );
+              return { Component: HROvertimePage };
+            },
+          },
+          {
+            path: "hr/vacations",
+            lazy: async () => {
+              const { HRVacationsPage } = await import(
+                "@/pages/app/HRVacationsPage/HRVacationsPage"
+              );
+              return { Component: HRVacationsPage };
+            },
+          },
+          {
+            path: "hr/severance",
+            lazy: async () => {
+              const { HRSeverancePage } = await import(
+                "@/pages/app/HRSeverancePage/HRSeverancePage"
+              );
+              return { Component: HRSeverancePage };
+            },
+          },
+          {
+            path: "hr/profit-sharing",
+            lazy: async () => {
+              const { HRProfitSharingPage } = await import(
+                "@/pages/app/HRProfitSharingPage/HRProfitSharingPage"
+              );
+              return { Component: HRProfitSharingPage };
+            },
+          },
+          {
+            path: "hr/deductions",
+            lazy: async () => {
+              const { HRDeductionsPage } = await import(
+                "@/pages/app/HRDeductionsPage/HRDeductionsPage"
+              );
+              return { Component: HRDeductionsPage };
+            },
+          },
+          {
+            path: "hr/beneficiaries",
+            lazy: async () => {
+              const { HRBeneficiariesPage } = await import(
+                "@/pages/app/HRBeneficiariesPage/HRBeneficiariesPage"
+              );
+              return { Component: HRBeneficiariesPage };
+            },
+          },
+          {
+            path: "hr/settlement",
+            lazy: async () => {
+              const { HRSettlementPage } = await import(
+                "@/pages/app/HRSettlementPage/HRSettlementPage"
+              );
+              return { Component: HRSettlementPage };
+            },
+          },
+          {
             path: "hr/attendance",
             loader: getHrAttendancePageData,
             lazy: async () => {
