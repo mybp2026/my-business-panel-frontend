@@ -35,7 +35,7 @@ interface RegisterRow {
 }
 
 const formatAmount = (n: number) =>
-  n.toLocaleString("es-CR", { minimumFractionDigits: 2 });
+  n.toLocaleString("es-VE", { minimumFractionDigits: 2 });
 
 export function QuickCashRegisterModal({
   isOpen,
@@ -307,7 +307,7 @@ export function QuickCashRegisterModal({
                     </p>
                     {isActive && row.session && (
                       <p className="text-xs text-gray-500 mt-0.5">
-                        Apertura: ₡{formatAmount(row.session.opening_amount)} ·{" "}
+                        Apertura: Bs. {formatAmount(row.session.opening_amount)} ·{" "}
                         {new Date(row.session.opened_at).toLocaleString(
                           "es-CR",
                         )}
@@ -418,10 +418,10 @@ export function QuickCashRegisterModal({
                       <div className="text-sm font-medium text-gray-700">
                         Total cierre:{" "}
                         <span className="font-mono text-gray-900">
-                          ₡{" "}
+                          Bs.{" "}
                           {calculateTotal(
                             row.register.cash_register_id,
-                          ).toLocaleString("es-CR", {
+                          ).toLocaleString("es-VE", {
                             minimumFractionDigits: 2,
                           })}
                         </span>
@@ -498,8 +498,8 @@ export function QuickCashRegisterModal({
                       {method.payment_method_name.replace(/_/g, " ")}
                     </span>
                     <span className="font-mono text-gray-800">
-                      ₡{" "}
-                      {Number(method.total_amount).toLocaleString("es-CR", {
+                      Bs.{" "}
+                      {Number(method.total_amount).toLocaleString("es-VE", {
                         minimumFractionDigits: 2,
                       })}
                     </span>
@@ -517,7 +517,7 @@ export function QuickCashRegisterModal({
                     <span className="font-mono text-gray-800">
                       {val == null
                         ? "—"
-                        : `₡ ${Number(val).toLocaleString("es-CR", { minimumFractionDigits: 2 })}`}
+                        : `Bs. ${Number(val).toLocaleString("es-VE", { minimumFractionDigits: 2 })}`}
                     </span>
                   </div>
                 ))}
@@ -526,7 +526,7 @@ export function QuickCashRegisterModal({
               <span className="font-mono text-gray-900">
                 {closedReport.total_sales_amount == null
                   ? "—"
-                  : `₡ ${Number(closedReport.total_sales_amount).toLocaleString("es-CR", { minimumFractionDigits: 2 })}`}
+                  : `Bs. ${Number(closedReport.total_sales_amount).toLocaleString("es-VE", { minimumFractionDigits: 2 })}`}
               </span>
             </div>
           </div>
@@ -546,9 +546,9 @@ export function QuickCashRegisterModal({
                   : "Faltante"}
               </p>
               <p className="font-mono text-lg font-bold mt-0.5">
-                {closedReport.mismatch_type === "surplus" ? "+" : "-"}₡{" "}
+                {closedReport.mismatch_type === "surplus" ? "+" : "-"}Bs.{" "}
                 {Number(closedReport.mismatch_amount ?? 0).toLocaleString(
-                  "es-CR",
+                  "es-VE",
                   { minimumFractionDigits: 2 },
                 )}
               </p>

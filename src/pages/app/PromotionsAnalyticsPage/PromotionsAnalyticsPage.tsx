@@ -10,7 +10,7 @@ import {
 } from "@/assets/icons";
 
 import { promotionApi } from "@/api/promotion.api";
-import { CRC_CURRENCY_ID, convertCurrency, formatMoney } from "@/utils/currency";
+import { BASE_CURRENCY_ID, convertCurrency, formatMoney } from "@/utils/currency";
 import {
   DEFAULT_PROMO_INTERVAL,
   PROMO_INTERVAL_OPTIONS,
@@ -124,7 +124,7 @@ export function PromotionsAnalyticsPage() {
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
   const [branchFilter, setBranchFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [selectedCurrencyId, setSelectedCurrencyId] = useState(CRC_CURRENCY_ID);
+  const [selectedCurrencyId, setSelectedCurrencyId] = useState(BASE_CURRENCY_ID);
   const [sortField, setSortField] = useState<SortField>("total_discount");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [loading, setLoading] = useState(false);
@@ -136,8 +136,8 @@ export function PromotionsAnalyticsPage() {
   const fmt = (value: number) =>
     formatMoney(
       value,
-      currency?.currency_code ?? "CRC",
-      currency?.symbol ?? "₡",
+      currency?.currency_code ?? "VES",
+      currency?.symbol ?? "Bs.",
     );
 
   async function refetch(

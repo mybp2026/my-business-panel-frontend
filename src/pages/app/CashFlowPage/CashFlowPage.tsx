@@ -18,7 +18,7 @@ import { IconTrendingUp, IconCreditCard, IconCheckCircle } from "@/assets/icons"
 
 import { financesApi } from "@/api/finances.api";
 import {
-  CRC_CURRENCY_ID,
+  BASE_CURRENCY_ID,
   convertCurrency,
   formatMoney,
 } from "@/utils/currency";
@@ -72,12 +72,12 @@ interface BucketChartPoint {
 function formatBucketLabel(dateStr: string, groupBy: CashFlowGroupBy): string {
   const d = new Date(dateStr);
   if (groupBy === "monthly") {
-    return d.toLocaleDateString("es-CR", { month: "short", year: "2-digit" });
+    return d.toLocaleDateString("es-VE", { month: "short", year: "2-digit" });
   }
   if (groupBy === "weekly") {
-    return d.toLocaleDateString("es-CR", { day: "2-digit", month: "short" });
+    return d.toLocaleDateString("es-VE", { day: "2-digit", month: "short" });
   }
-  return d.toLocaleDateString("es-CR", { day: "2-digit", month: "short" });
+  return d.toLocaleDateString("es-VE", { day: "2-digit", month: "short" });
 }
 
 function computeChartData(
@@ -153,8 +153,8 @@ function fmt(
 ): string {
   return formatMoney(
     value,
-    currency?.currency_code ?? "CRC",
-    currency?.symbol ?? "₡",
+    currency?.currency_code ?? "VES",
+    currency?.symbol ?? "Bs.",
   );
 }
 
@@ -174,7 +174,7 @@ function TrendChart({
       </div>
     );
   }
-  const symbol = currency?.symbol ?? "₡";
+  const symbol = currency?.symbol ?? "Bs.";
   return (
     <ResponsiveContainer width="100%" height={300}>
       <ComposedChart data={points} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
@@ -252,7 +252,7 @@ function ProjectionsTable({
                 className="border-b border-gray-50 hover:bg-gray-50"
               >
                 <td className="py-2.5 pr-4 font-mono text-xs text-gray-600">
-                  {new Date(p.projection_date).toLocaleDateString("es-CR")}
+                  {new Date(p.projection_date).toLocaleDateString("es-VE")}
                 </td>
                 <td className="py-2.5 pr-4">
                   <span
@@ -303,7 +303,7 @@ export function CashFlowPage() {
   const [endDate, setEndDate] = useState<string>(
     initialCashFlow.end_date || new Date().toISOString().slice(0, 10),
   );
-  const [selectedCurrencyId, setSelectedCurrencyId] = useState(CRC_CURRENCY_ID);
+  const [selectedCurrencyId, setSelectedCurrencyId] = useState(BASE_CURRENCY_ID);
   const [loading, setLoading] = useState(false);
 
   const currency = currencies.find(

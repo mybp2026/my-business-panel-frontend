@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
-import { CategoryComboBox } from "@/components/ui/CategoryComboBox";
 import {
   AttributeAssignmentEditor,
   type AttributeAssignmentRow,
@@ -91,9 +90,6 @@ export function ProductUpsertModal({
             sku: product.sku,
             product_name: product.variant_name ?? product.product_name ?? "",
             description: product.description ?? "",
-            category_id: product.category_id ?? product.cabys_code ?? "",
-            category_name:
-              product.category?.category_name ?? product.cabys_code ?? "",
             price: String(product.unit_price ?? product.price ?? ""),
             cost_price:
               product.cost_price !== undefined && product.cost_price !== null
@@ -112,8 +108,6 @@ export function ProductUpsertModal({
             sku: "",
             product_name: "",
             description: "",
-            category_id: "",
-            category_name: "",
             price: "",
             cost_price: "",
             supplier_id: "",
@@ -124,7 +118,6 @@ export function ProductUpsertModal({
           },
   });
 
-  const categoryName = watch("category_name") ?? "";
   const isGiftable = watch("giftable") ?? false;
 
   // Reset modal-local state whenever it opens or the product changes.
@@ -139,9 +132,6 @@ export function ProductUpsertModal({
             sku: product.sku,
             product_name: product.variant_name ?? product.product_name ?? "",
             description: product.description ?? "",
-            category_id: product.category_id ?? product.cabys_code ?? "",
-            category_name:
-              product.category?.category_name ?? product.cabys_code ?? "",
             price: String(product.unit_price ?? product.price ?? ""),
             cost_price:
               product.cost_price !== undefined && product.cost_price !== null
@@ -160,8 +150,6 @@ export function ProductUpsertModal({
             sku: "",
             product_name: "",
             description: "",
-            category_id: "",
-            category_name: "",
             price: "",
             cost_price: "",
             supplier_id: "",
@@ -291,7 +279,6 @@ export function ProductUpsertModal({
           {
             product_name: data.product_name,
             description: data.description || undefined,
-            category_id: data.category_id,
             unit_price: price,
             cost_price: costPrice,
             supplier_id: editSupplierId,
@@ -373,14 +360,12 @@ export function ProductUpsertModal({
           sku: data.sku.toUpperCase().trim(),
           product_name: data.product_name,
           description: data.description || undefined,
-          category_id: data.category_id,
           price,
           cost_price: costPrice,
           supplier_id: supplierId,
           giftable: data.giftable ?? false,
           includes_iva: data.includes_iva ?? false,
           giftable_from: giftableFrom,
-          cabys_code: data.category_id,
           attribute_value_ids,
           group_ids: groupIds,
         });
@@ -500,25 +485,6 @@ export function ProductUpsertModal({
           />
 
           <Controller
-            name="category_id"
-            control={control}
-            render={({ field }) => (
-              <CategoryComboBox
-                label="Categoría CABYS"
-                value={field.value}
-                displayValue={categoryName}
-                onChange={(id, name) => {
-                  field.onChange(id);
-                  setValue("category_name", name);
-                }}
-                error={errors.category_id?.message}
-                hint="13 dígitos para facturación electrónica"
-                required
-              />
-            )}
-          />
-
-          <Controller
             name="supplier_id"
             control={control}
             render={({ field }) => (
@@ -560,7 +526,7 @@ export function ProductUpsertModal({
 
           {isGiftable && (
             <Input
-              label="Monto mínimo de compra para ser regalable (₡)"
+              label="Monto mínimo de compra para ser regalable (Bs.)"
               type="number"
               placeholder="Ej: 50000.00"
               step="0.01"

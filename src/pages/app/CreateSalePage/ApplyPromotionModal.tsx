@@ -82,10 +82,10 @@ interface Props {
 }
 
 const fmt = (v: number) =>
-  `₡ ${Number(v).toLocaleString("es-CR", { minimumFractionDigits: 2 })}`;
+  `Bs. ${Number(v).toLocaleString("es-VE", { minimumFractionDigits: 2 })}`;
 
 const formatAmount = (value: number, symbol: string) =>
-  `${symbol} ${value.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`;
+  `${symbol} ${value.toLocaleString("es-VE", { minimumFractionDigits: 2 })}`;
 
 export function ApplyPromotionModal({
   isOpen,

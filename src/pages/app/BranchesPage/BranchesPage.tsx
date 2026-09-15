@@ -35,15 +35,12 @@ interface BranchFormState {
   branch_address: string;
   is_main_branch: boolean;
   tenant_id?: string;
-  territorio_code: string;
-  otras_senas: string;
 }
 
 interface BranchFormErrors {
   branch_name?: string;
   branch_number?: string;
   tenant_id?: string;
-  territorio_code?: string;
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -86,8 +83,6 @@ export function BranchesPage() {
     branch_address: "",
     is_main_branch: false,
     tenant_id: undefined,
-    territorio_code: "",
-    otras_senas: "",
   };
   const [formData, setFormData] = useState<BranchFormState>(initialFormState);
 
@@ -99,11 +94,6 @@ export function BranchesPage() {
       errors.branch_number = "Número de sucursal es requerido";
     if (isSuperAdmin && !editingBranch && !formData.tenant_id)
       errors.tenant_id = "Empresa (Tenant) es requerida";
-    if (
-      formData.territorio_code.trim() &&
-      !/^\d{5}$/.test(formData.territorio_code.trim())
-    )
-      errors.territorio_code = "Debe ser exactamente 5 dígitos (ej: 10101)";
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -195,17 +185,11 @@ export function BranchesPage() {
     if (!validateForm()) return;
     setIsSubmitting(true);
 
-    const locationFields = {
-      territorio_code: formData.territorio_code.trim() || undefined,
-      otras_senas: formData.otras_senas.trim() || undefined,
-    };
-
     if (editingBranch) {
       await handleUpdateBranch(editingBranch.branch_id, {
         branch_name: formData.branch_name,
         branch_address: formData.branch_address,
         is_main_branch: formData.is_main_branch,
-        ...locationFields,
       });
     } else {
       const tenantId = isSuperAdmin
@@ -217,7 +201,6 @@ export function BranchesPage() {
         branch_number: formData.branch_number,
         branch_address: formData.branch_address,
         is_main_branch: formData.is_main_branch,
-        ...locationFields,
       });
     }
 
@@ -227,17 +210,11 @@ export function BranchesPage() {
 
   const handleEditBranch = (b: Branch) => {
     setEditingBranch(b);
-    const territorioCode =
-      b.provincia && b.canton && b.distrito
-        ? `${b.provincia}${b.canton}${b.distrito}`
-        : "";
     setFormData({
       branch_name: b.branch_name,
       branch_number: b.branch_number,
       branch_address: b.branch_address,
       is_main_branch: b.is_main_branch,
-      territorio_code: territorioCode,
-      otras_senas: b.otras_senas ?? "",
     });
     setFormErrors({});
     setIsModalOpen(true);

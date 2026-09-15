@@ -157,7 +157,7 @@ export function UserDetailModal({
                     {field(
                       "Salario base",
                       currentUser.employee.base_salary != null
-                        ? `₡${Number(currentUser.employee.base_salary).toLocaleString("es-CR")}`
+                        ? `Bs. ${Number(currentUser.employee.base_salary).toLocaleString("es-VE")}`
                         : null,
                     )}
                     {field("Horas", currentUser.employee.hours)}

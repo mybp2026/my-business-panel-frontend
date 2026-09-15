@@ -27,7 +27,7 @@ export function FnzExpensePage() {
   const isAdmin = (user?.role.role_id ?? 4) < 4;
 
   const crcCurrency =
-    currencies.find((c) => c.currency_code === "CRC") ?? currencies[0];
+    currencies.find((c) => c.currency_code === "VES") ?? currencies[0];
 
   const [displayCurrency, setDisplayCurrency] = useState<Currency>(
     crcCurrency ?? currencies[0],

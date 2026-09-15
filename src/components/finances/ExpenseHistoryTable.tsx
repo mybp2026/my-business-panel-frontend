@@ -43,8 +43,8 @@ export function ExpenseHistoryTable({
     const currency = currencies.find(
       (c) => Number(c.currency_id) === Number(currencyId),
     );
-    const symbol = currency?.symbol ?? "₡";
-    return `${symbol} ${Number(value ?? 0).toLocaleString("es-CR", {
+    const symbol = currency?.symbol ?? "Bs.";
+    return `${symbol} ${Number(value ?? 0).toLocaleString("es-VE", {
       minimumFractionDigits: 2,
     })}`;
   };

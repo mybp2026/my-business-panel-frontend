@@ -10,7 +10,6 @@ export interface BulkProductInput {
   tenant_id: string;
   sku: string;
   variant_name: string;
-  cabys_code?: string | null;
   unit_price: number;
   cost_price?: number;
   attribute_value_ids?: string[];
@@ -57,7 +56,6 @@ export const productApi = {
               tenant_id: data.tenant_id,
               sku: data.sku,
               variant_name: data.product_name,
-              cabys_code: data.cabys_code ?? null,
               unit_price: data.price,
               cost_price: data.cost_price ?? 0,
               supplier_id: data.supplier_id ?? null,

@@ -21,11 +21,6 @@ const INITIAL_STATE: OnboardingData = {
   branchName: "",
   branchNumber: "",
   branchAddress: "",
-  haciendaUsername: "",
-  haciendaPassword: "",
-  haciendaClientId: "api-prod",
-  p12Base64: "",
-  p12Password: "",
   // tenantId: null,
   // branchId: null,
   userId: null,
@@ -52,16 +47,6 @@ interface OnboardingContextValue {
       | "branchName"
       | "branchNumber"
       | "branchAddress"
-    >,
-  ) => void;
-  setStep3: (
-    values: Pick<
-      OnboardingData,
-      | "haciendaUsername"
-      | "haciendaPassword"
-      | "haciendaClientId"
-      | "p12Base64"
-      | "p12Password"
     >,
   ) => void;
   setCreatedIds: (ids: {
@@ -107,8 +92,6 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     update(values);
   const setStep2: OnboardingContextValue["setStep2"] = (values) =>
     update(values);
-  const setStep3: OnboardingContextValue["setStep3"] = (values) =>
-    update(values);
   const setCreatedIds: OnboardingContextValue["setCreatedIds"] = (ids) =>
     update(ids);
 
@@ -119,7 +102,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
   return (
     <OnboardingContext.Provider
-      value={{ data, setStep1, setStep2, setStep3, setCreatedIds, clear }}
+      value={{ data, setStep1, setStep2, setCreatedIds, clear }}
     >
       {children}
     </OnboardingContext.Provider>

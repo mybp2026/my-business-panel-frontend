@@ -46,7 +46,7 @@ interface CollectionFormState {
   currency_id: string;
 }
 
-const BASE_CURRENCY_ID = 1; // CRC
+const BASE_CURRENCY_ID = 1; // VES
 
 const emptyCollectionForm: CollectionFormState = {
   sale_account_receivable_id: "",
@@ -158,7 +158,7 @@ export function AccountsReceivablePage() {
     setIsFetchingRate(false);
   };
 
-  // Fetch latest rate from selected currency to CRC whenever currency changes.
+  // Fetch latest rate from selected currency to VES whenever currency changes.
   useEffect(() => {
     const selectedCurrencyId = Number(collectionForm.currency_id);
     if (!isCollectionModalOpen || !selectedCurrencyId) return;
@@ -261,7 +261,7 @@ export function AccountsReceivablePage() {
 
     if (amountInCrc > maxAmountCrc + 0.01) {
       setCollectionError(
-        "El cobro no puede superar el saldo pendiente (equivalente en colones).",
+        "El cobro no puede superar el saldo pendiente (equivalente en bolivares).",
       );
       return;
     }
@@ -557,7 +557,7 @@ export function AccountsReceivablePage() {
                     {formatCurrency(exchangeRate)}
                   </p>
                   <p className="mt-1 font-semibold">
-                    Equivalente en colones:{" "}
+                    Equivalente en bolivares:{" "}
                     {formatCurrency(convertedAmountCrc)}
                   </p>
                 </>

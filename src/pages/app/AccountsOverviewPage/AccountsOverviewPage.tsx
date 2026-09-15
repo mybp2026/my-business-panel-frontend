@@ -32,7 +32,7 @@ import type { ExchangeRate } from "@/interfaces/entities/ExchangeRate.interface"
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const CRC_CURRENCY_ID = 1;
+const BASE_CURRENCY_ID = 1; // VES
 
 const STATUS_OPTIONS = [
   { value: "", label: "Todos los estados" },
@@ -69,16 +69,16 @@ function getExchangeRateToCrc(
   rates: ExchangeRate[],
   fromCurrencyId: number,
 ): number | null {
-  if (fromCurrencyId === CRC_CURRENCY_ID) return 1;
+  if (fromCurrencyId === BASE_CURRENCY_ID) return 1;
   const direct = rates.find(
     (r) =>
       Number(r.from_currency_id) === fromCurrencyId &&
-      Number(r.to_currency_id) === CRC_CURRENCY_ID,
+      Number(r.to_currency_id) === BASE_CURRENCY_ID,
   );
   if (direct) return Number(direct.rate);
   const rev = rates.find(
     (r) =>
-      Number(r.from_currency_id) === CRC_CURRENCY_ID &&
+      Number(r.from_currency_id) === BASE_CURRENCY_ID &&
       Number(r.to_currency_id) === fromCurrencyId,
   );
   if (rev && Number(rev.rate) > 0) return 1 / Number(rev.rate);
@@ -90,10 +90,10 @@ function convertAmount(
   targetCurrencyId: number,
   rates: ExchangeRate[],
 ): number | null {
-  if (targetCurrencyId === CRC_CURRENCY_ID) return amountCrc;
+  if (targetCurrencyId === BASE_CURRENCY_ID) return amountCrc;
   const toTarget = rates.find(
     (r) =>
-      Number(r.from_currency_id) === CRC_CURRENCY_ID &&
+      Number(r.from_currency_id) === BASE_CURRENCY_ID &&
       Number(r.to_currency_id) === targetCurrencyId,
   );
   if (toTarget) return amountCrc * Number(toTarget.rate);
@@ -109,16 +109,16 @@ function formatAmount(
   symbol: string,
 ): string {
   const num = Number(value ?? 0);
-  if (targetCurrencyId === CRC_CURRENCY_ID) {
-    return new Intl.NumberFormat("es-CR", {
+  if (targetCurrencyId === BASE_CURRENCY_ID) {
+    return new Intl.NumberFormat("es-VE", {
       style: "currency",
-      currency: "CRC",
+      currency: "VES",
       maximumFractionDigits: 2,
     }).format(num);
   }
   const converted = convertAmount(num, targetCurrencyId, rates);
   if (converted === null) return "—";
-  return `${symbol} ${converted.toLocaleString("es-CR", {
+  return `${symbol} ${converted.toLocaleString("es-VE", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -126,7 +126,7 @@ function formatAmount(
 
 function formatDate(value?: string | null): string {
   if (!value) return "—";
-  return new Date(value).toLocaleDateString("es-CR");
+  return new Date(value).toLocaleDateString("es-VE");
 }
 
 function computeAlertStatus(
@@ -363,7 +363,7 @@ export function AccountsOverviewPage() {
 
   const [overview, setOverview] = useState(initialOverview);
   const [branchId, setBranchId] = useState("");
-  const [selectedCurrencyId, setSelectedCurrencyId] = useState(CRC_CURRENCY_ID);
+  const [selectedCurrencyId, setSelectedCurrencyId] = useState(BASE_CURRENCY_ID);
 
   // Modal state
   const [selectedPayable, setSelectedPayable] =
@@ -416,7 +416,7 @@ export function AccountsOverviewPage() {
   // Currency formatting
   const currencySymbol =
     currencies.find((c) => Number(c.currency_id) === selectedCurrencyId)
-      ?.symbol ?? "₡";
+      ?.symbol ?? "Bs.";
   const fmt = (value: number | string | null | undefined) =>
     formatAmount(value, selectedCurrencyId, exchangeRates, currencySymbol);
 
@@ -924,7 +924,7 @@ export function AccountsOverviewPage() {
                   },
                   {
                     key: "amount_paid",
-                    label: "Monto (CRC)",
+                    label: "Monto (Bs.)",
                     width: "18%",
                     render: (value) => fmt(value as number | string),
                   },

@@ -23,13 +23,6 @@ export function BranchDetailModal({
     );
   };
 
-  const loc = branch as Branch & {
-    provincia?: string;
-    canton?: string;
-    distrito?: string;
-    otras_senas?: string;
-  };
-
   return (
     <Modal isOpen onClose={onClose} title="Detalle de Sucursal" size="md">
       <div className="space-y-5">
@@ -44,20 +37,6 @@ export function BranchDetailModal({
             {field("Dirección", branch.branch_address)}
           </div>
         </div>
-
-        {(loc.provincia || loc.canton || loc.otras_senas) && (
-          <div className="border-t border-gray-100 pt-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-              Ubicación (Factura Electrónica)
-            </p>
-            <div className="grid grid-cols-2 gap-4">
-              {field("Provincia", loc.provincia)}
-              {field("Cantón", loc.canton)}
-              {field("Distrito", loc.distrito)}
-              {field("Otras señas", loc.otras_senas)}
-            </div>
-          </div>
-        )}
 
         {(branch as any).tenant_name && (
           <div className="border-t border-gray-100 pt-4">

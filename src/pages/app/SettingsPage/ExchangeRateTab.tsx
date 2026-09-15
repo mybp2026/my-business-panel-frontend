@@ -153,7 +153,7 @@ export function ExchangeRateTab() {
         <p className="font-semibold mb-1">¿Para qué sirven las tasas de cambio?</p>
         <p>
           Las tasas de cambio permiten convertir montos entre monedas (por
-          ejemplo, dólares estadounidenses a colones costarricenses) en ventas y
+          ejemplo, dólares estadounidenses a bolívares) en ventas y
           pagos. Solo los administradores pueden crear, modificar o eliminar
           registros. La tasa se aplica por moneda origen, moneda destino y fecha
           efectiva.

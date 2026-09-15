@@ -33,13 +33,13 @@ import { ContractEditorModal } from "./ContractEditorModal";
 import { ContractDetailModal } from "./ContractDetailModal";
 
 const formatCurrency = (value: number) =>
-  `CRC ${Number(value).toLocaleString("es-CR", {
+  `Bs. ${Number(value).toLocaleString("es-VE", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
 
 const formatDate = (value: string) =>
-  new Date(value).toLocaleDateString("es-CR", {
+  new Date(value).toLocaleDateString("es-VE", {
     year: "numeric",
     month: "short",
     day: "2-digit",

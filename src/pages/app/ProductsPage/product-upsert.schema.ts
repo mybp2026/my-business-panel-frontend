@@ -5,8 +5,6 @@ export function buildProductUpsertSchema(requireTenant: boolean) {
     sku: z.string().min(1, "SKU es requerido"),
     product_name: z.string().min(1, "Nombre del producto es requerido"),
     description: z.string().optional().or(z.literal("")),
-    category_id: z.string().length(13, "Debe seleccionar un código CABYS válido de 13 dígitos"),
-    category_name: z.string().optional(),
     price: z
       .string()
       .min(1, "Precio es requerido")

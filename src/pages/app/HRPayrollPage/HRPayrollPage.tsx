@@ -37,7 +37,7 @@ import { PaysheetDetailModal } from "./PaysheetDetailModal";
 import { employeeApi } from "@/api/employee.api";
 
 const formatCurrency = (value: number) =>
-  `CRC ${Number(value).toLocaleString("es-CR", {
+  `Bs. ${Number(value).toLocaleString("es-VE", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;

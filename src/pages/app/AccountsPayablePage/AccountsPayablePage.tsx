@@ -41,7 +41,7 @@ import {
   getPayableStatusTone,
 } from "@/utils/purchase";
 
-const CRC_CURRENCY_ID = 1;
+const BASE_CURRENCY_ID = 1; // VES
 
 interface PaymentFormState {
   purchase_account_payable_id: string;
@@ -56,7 +56,7 @@ const emptyPaymentForm: PaymentFormState = {
   purchase_account_payable_id: "",
   amount_paid: "",
   payment_method_id: "",
-  currency_id: String(CRC_CURRENCY_ID),
+  currency_id: String(BASE_CURRENCY_ID),
   payment_reference: "",
   exchange_rate_override: "",
 };
@@ -104,7 +104,7 @@ export function AccountsPayablePage() {
   useEffect(() => {
     if (!isPaymentModalOpen) return;
 
-    if (selectedCurrencyId === CRC_CURRENCY_ID) {
+    if (selectedCurrencyId === BASE_CURRENCY_ID) {
       setExchangeRate(null);
       return;
     }
@@ -204,7 +204,7 @@ export function AccountsPayablePage() {
       purchase_account_payable_id: payable.purchase_account_payable_id,
       amount_paid: String(Number(payable.balance_due ?? 0)),
       payment_method_id: String(filteredMethods[0]?.payment_method_id ?? ""),
-      currency_id: String(CRC_CURRENCY_ID),
+      currency_id: String(BASE_CURRENCY_ID),
       payment_reference: "",
       exchange_rate_override: "",
     });
@@ -257,7 +257,7 @@ export function AccountsPayablePage() {
           selectedPayable.purchase_account_payable_id,
         amount_paid: amount,
         payment_method_id: paymentMethodId,
-        currency_id: currencyId !== CRC_CURRENCY_ID ? currencyId : undefined,
+        currency_id: currencyId !== BASE_CURRENCY_ID ? currencyId : undefined,
         payment_reference: paymentForm.payment_reference || undefined,
       };
 
@@ -374,7 +374,7 @@ export function AccountsPayablePage() {
 
   const amount = Number(paymentForm.amount_paid) || 0;
   const convertedAmount = useMemo(() => {
-    if (selectedCurrencyId === CRC_CURRENCY_ID) {
+    if (selectedCurrencyId === BASE_CURRENCY_ID) {
       if (effectiveExchangeRate <= 0) return null;
       return round2(amount / effectiveExchangeRate);
     } else {
@@ -643,7 +643,7 @@ export function AccountsPayablePage() {
           />
 
           {/* Conversion display with rate info */}
-          {selectedCurrencyId !== CRC_CURRENCY_ID && (
+          {selectedCurrencyId !== BASE_CURRENCY_ID && (
             <>
               {amount > 0 && convertedAmount !== null && (
                 <div className="rounded-xl border border-blue-200 bg-blue-50 p-3">
@@ -653,17 +653,17 @@ export function AccountsPayablePage() {
                         Conversión en vivo
                       </p>
                       <p className="text-sm font-medium text-blue-900 mt-1">
-                        {amount.toLocaleString("es-CR", {
+                        {amount.toLocaleString("es-VE", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}{" "}
                         {selectedCurrency?.currency_code} ={" "}
                         <span className="font-semibold">
-                          {convertedAmount.toLocaleString("es-CR", {
+                          {convertedAmount.toLocaleString("es-VE", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}{" "}
-                          CRC
+                          Bs.
                         </span>
                       </p>
                     </div>
@@ -671,7 +671,7 @@ export function AccountsPayablePage() {
                       <div className="text-right text-xs text-blue-700">
                         <p className="font-medium">
                           Tasa:{" "}
-                          {effectiveExchangeRate.toLocaleString("es-CR", {
+                          {effectiveExchangeRate.toLocaleString("es-VE", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 6,
                           })}
@@ -694,7 +694,7 @@ export function AccountsPayablePage() {
                     1 {exchangeRate?.from_currency_code} ={" "}
                     <span className="font-semibold">
                       {exchangeRate
-                        ? Number(exchangeRate.rate).toLocaleString("es-CR", {
+                        ? Number(exchangeRate.rate).toLocaleString("es-VE", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 6,
                           })
@@ -705,7 +705,7 @@ export function AccountsPayablePage() {
                   <p className="text-xs text-blue-500 mt-1">
                     Vigente al{" "}
                     {new Date(exchangeRate.effective_date).toLocaleDateString(
-                      "es-CR",
+                      "es-VE",
                     )}
                   </p>
                 </div>
@@ -757,7 +757,7 @@ export function AccountsPayablePage() {
                       className="mt-2"
                       hint={`Tasa del sistema: ${
                         exchangeRate
-                          ? Number(exchangeRate.rate).toLocaleString("es-CR", {
+                          ? Number(exchangeRate.rate).toLocaleString("es-VE", {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 6,
                             })

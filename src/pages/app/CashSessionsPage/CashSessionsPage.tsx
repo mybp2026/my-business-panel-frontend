@@ -46,12 +46,12 @@ const ACTION_OPTIONS: { value: SessionAction; label: string }[] = [
 ];
 
 const formatDate = (value?: string | null) =>
-  value ? new Date(value).toLocaleString("es-CR") : "-";
+  value ? new Date(value).toLocaleString("es-VE") : "-";
 
 const formatCurrency = (value?: number | null) =>
   value === undefined || value === null
     ? "-"
-    : `CRC ${Number(value).toLocaleString("es-CR", {
+    : `Bs. ${Number(value).toLocaleString("es-VE", {
         minimumFractionDigits: 2,
       })}`;
 
@@ -696,13 +696,13 @@ export function CashSessionsPage() {
                   <div className="text-sm font-medium text-gray-700">
                     Total cierre:{" "}
                     <span className="font-mono text-gray-900">
-                      ₡{" "}
+                      Bs.{" "}
                       {(
                         (parseAmount(cashAmount) || 0) +
                         (parseAmount(debitAmount) || 0) +
                         (parseAmount(creditAmount) || 0) +
                         (parseAmount(transferAmount) || 0)
-                      ).toLocaleString("es-CR", { minimumFractionDigits: 2 })}
+                      ).toLocaleString("es-VE", { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 )}

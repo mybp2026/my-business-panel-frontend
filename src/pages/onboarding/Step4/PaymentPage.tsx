@@ -196,13 +196,6 @@ function PaymentForm() {
           document_number: data.docNumber,
           phone: data.phone,
         },
-        hacienda: {
-          hacienda_username: data.haciendaUsername,
-          hacienda_password: data.haciendaPassword,
-          hacienda_client_id: data.haciendaClientId,
-          p12_base64: data.p12Base64,
-          p12_password: data.p12Password,
-        },
         subscription: {
           stripe_payment_method_id: stripePaymentMethodId,
           plan: PLAN.plan,

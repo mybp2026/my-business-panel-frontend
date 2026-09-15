@@ -18,11 +18,11 @@ const fmt = (value?: number | string | null) => {
   const num = Number(value);
   return value === undefined || value === null || isNaN(num)
     ? "—"
-    : `₡ ${num.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`;
+    : `Bs. ${num.toLocaleString("es-VE", { minimumFractionDigits: 2 })}`;
 };
 
 const fmtDate = (value?: string | null) =>
-  value ? new Date(value).toLocaleString("es-CR") : "—";
+  value ? new Date(value).toLocaleString("es-VE") : "—";
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -84,17 +84,17 @@ const RowWithComparison = ({
   userOptional?: boolean;
 }) => {
   const fmtAmt = (val: number | string | null | undefined) => {
-    if (val === undefined || val === null) return userOptional ? "—" : "₡ 0,00";
+    if (val === undefined || val === null) return userOptional ? "—" : "Bs. 0,00";
     const num = Number(val);
     if (isNaN(num)) return "—";
-    return `₡ ${num.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`;
+    return `Bs. ${num.toLocaleString("es-VE", { minimumFractionDigits: 2 })}`;
   };
 
   const fmtSys = (val: number | string | null | undefined) => {
-    if (val === undefined || val === null) return "₡ 0,00";
+    if (val === undefined || val === null) return "Bs. 0,00";
     const num = Number(val);
-    if (isNaN(num)) return "₡ 0,00";
-    return `₡ ${num.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`;
+    if (isNaN(num)) return "Bs. 0,00";
+    return `Bs. ${num.toLocaleString("es-VE", { minimumFractionDigits: 2 })}`;
   };
 
   return (

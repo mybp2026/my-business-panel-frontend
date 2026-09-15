@@ -7,8 +7,7 @@ export interface ReturnProductPayload {
 
 export interface ReturnTransaction {
   return_transaction_id: string;
-  digital_sale_invoice_id: string | null;
-  electronic_sale_invoice_id: string | null;
+  invoice_id: string;
   tenant_customer_id: string | null;
   total_refund_amount: number;
   refund_method: number | null;
@@ -35,7 +34,6 @@ export interface ReturnProduct {
 
 export interface ReturnTransactionDetail {
   transaction: ReturnTransaction & {
-    electronic_consecutive?: string;
     updated_at: string;
   };
   products: ReturnProduct[];

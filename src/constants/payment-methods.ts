@@ -24,7 +24,7 @@ export const refundStatuses = [
 ];
 
 export const currencies = [
-  { value: 1, label: "Colón Costarricense (CRC)", code: "CRC", symbol: "₡" },
+  { value: 1, label: "Bolívar (VES)", code: "VES", symbol: "Bs." },
   { value: 2, label: "Dólar Estadounidense (USD)", code: "USD", symbol: "$" },
   { value: 3, label: "Euro (EUR)", code: "EUR", symbol: "€" },
 ];

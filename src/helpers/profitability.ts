@@ -1,4 +1,4 @@
-import { CRC_CURRENCY_ID, convertCurrency } from "@/utils/currency";
+import { BASE_CURRENCY_ID, convertCurrency } from "@/utils/currency";
 import type { ExchangeRate } from "@/interfaces/entities/ExchangeRate.interface";
 import type {
   BranchProfitability,
@@ -130,7 +130,7 @@ export function computeProfitability(
   for (const row of raw.sales) {
     const netSales = toTarget(Number(row.net_sales), row.currency_id);
     const discounts = toTarget(Number(row.discounts), row.currency_id);
-    const cogs = toTarget(Number(row.cogs), CRC_CURRENCY_ID);
+    const cogs = toTarget(Number(row.cogs), BASE_CURRENCY_ID);
     for (const acc of [
       branchBucket(row.branch_id, row.bucket_start),
       generalBucket(row.bucket_start),
@@ -143,7 +143,7 @@ export function computeProfitability(
 
   for (const row of raw.returns) {
     const returns = toTarget(Number(row.returns), row.currency_id);
-    const returnsCogs = toTarget(Number(row.returns_cogs), CRC_CURRENCY_ID);
+    const returnsCogs = toTarget(Number(row.returns_cogs), BASE_CURRENCY_ID);
     for (const acc of [
       branchBucket(row.branch_id, row.bucket_start),
       generalBucket(row.bucket_start),

@@ -1,7 +1,7 @@
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { IconCheckCircle } from "@/assets/icons";
-import type { DigitalInvoiceInfo } from "@/interfaces/entities/Sale.interface";
+import type { InvoiceInfo } from "@/interfaces/entities/Sale.interface";
 import { usePrintInvoice } from "@/hooks/usePrintInvoice";
 
 interface PaymentSplit {
@@ -24,10 +24,8 @@ interface SaleResultModalProps {
   saleId: string | null;
   totalAmount: number;
   currencySymbol: string;
-  hasElectronicInvoice: boolean;
-  eInvoiceWarning?: string;
   items?: SaleReceiptItem[];
-  digitalInvoice?: DigitalInvoiceInfo | null;
+  digitalInvoice?: InvoiceInfo | null;
   paymentSplits: PaymentSplit[];
   pointsRedeemed?: number;
   pointsRate?: number;
@@ -35,21 +33,19 @@ interface SaleResultModalProps {
 }
 
 const fmt = (value: number | null | undefined, symbol: string) =>
-  `${symbol} ${Number(value ?? 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })}`;
+  `${symbol} ${Number(value ?? 0).toLocaleString("es-VE", { minimumFractionDigits: 2 })}`;
 
 const fmtDate = (value?: string | null) =>
-  value ? new Date(value).toLocaleString("es-CR") : "—";
+  value ? new Date(value).toLocaleString("es-VE") : "—";
 
 const fmtDateOnly = (value?: string | null) =>
-  value ? new Date(value).toLocaleDateString("es-CR") : "—";
+  value ? new Date(value).toLocaleDateString("es-VE") : "—";
 
 export function SaleResultModal({
   isOpen,
   saleId,
   totalAmount,
   currencySymbol,
-  hasElectronicInvoice,
-  eInvoiceWarning,
   items,
   digitalInvoice,
   pointsRedeemed,
@@ -121,20 +117,6 @@ export function SaleResultModal({
             label="Total"
             value={
               <span className="font-semibold">{fmt(totalAmount, symbol)}</span>
-            }
-          />
-          <Row
-            label="Factura electrónica"
-            value={
-              <span
-                className={
-                  hasElectronicInvoice
-                    ? "text-emerald-700 font-medium"
-                    : "text-gray-700"
-                }
-              >
-                {hasElectronicInvoice ? "Generada" : "No requerida"}
-              </span>
             }
           />
         </div>
@@ -258,10 +240,6 @@ export function SaleResultModal({
                     : "—"
                 }
               />
-              <Row
-                label="Factura electrónica"
-                value={digitalInvoice.has_electronic_invoice ? "Sí" : "No"}
-              />
               {digitalInvoice.seller_email && (
                 <Row label="Vendedor" value={digitalInvoice.seller_email} />
               )}
@@ -278,7 +256,6 @@ export function SaleResultModal({
                       <tr>
                         <th className="px-2 py-2 text-left">Descripción</th>
                         <th className="px-2 py-2 text-left">SKU</th>
-                        <th className="px-2 py-2 text-left">CABYS</th>
                         <th className="px-2 py-2 text-right">Cant.</th>
                         <th className="px-2 py-2 text-right">P. unit.</th>
                         <th className="px-2 py-2 text-right">Subtotal</th>
@@ -290,7 +267,7 @@ export function SaleResultModal({
                     <tbody className="divide-y divide-gray-100">
                       {digitalInvoice.items.map((it) => (
                         <tr
-                          key={it.digital_sale_invoice_item_id}
+                          key={it.invoice_item_id}
                           className="bg-white"
                         >
                           <td className="px-2 py-2 text-gray-900">
@@ -298,9 +275,6 @@ export function SaleResultModal({
                           </td>
                           <td className="px-2 py-2 font-mono text-gray-500">
                             {it.sku ?? "—"}
-                          </td>
-                          <td className="px-2 py-2 font-mono text-gray-500">
-                            {it.cabys_code ?? "—"}
                           </td>
                           <td className="px-2 py-2 text-right text-gray-700">
                             {it.quantity}
@@ -399,10 +373,10 @@ export function SaleResultModal({
                       </span>
                       <div className="text-right">
                         <span className="text-sm font-bold text-amber-800">
-                          -{pointsRedeemed.toLocaleString("es-CR")} pts
+                          -{pointsRedeemed.toLocaleString("es-VE")} pts
                         </span>
                         <p className="text-xs text-amber-700 mt-0.5">
-                          ≈ {fmt(Math.floor(pointsRedeemed / pointsRate), "₡")}
+                          ≈ {fmt(Math.floor(pointsRedeemed / pointsRate), "Bs.")}
                         </p>
                       </div>
                     </div>
@@ -467,12 +441,6 @@ export function SaleResultModal({
               </table>
             </div>
           </div>
-        )}
-
-        {eInvoiceWarning && (
-          <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-            {eInvoiceWarning}
-          </p>
         )}
 
         <div className="flex flex-col sm:flex-row gap-2 pt-2">

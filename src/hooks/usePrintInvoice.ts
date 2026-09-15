@@ -1,15 +1,15 @@
 import { useCallback } from "react";
-import type { DigitalInvoiceInfo } from "@/interfaces/entities/Sale.interface";
+import type { InvoiceInfo } from "@/interfaces/entities/Sale.interface";
 
 export interface PrintInvoiceData {
   saleId?: string | null;
-  digitalInvoice: DigitalInvoiceInfo | null;
+  digitalInvoice: InvoiceInfo | null;
   pointsRedeemed?: number;
   pointsRate?: number;
 }
 
 const fmt = (value: number | null | undefined, symbol: string) =>
-  `${symbol}${Number(value ?? 0).toLocaleString("es-CR", {
+  `${symbol}${Number(value ?? 0).toLocaleString("es-VE", {
     minimumFractionDigits: 2,
   })}`;
 
@@ -33,7 +33,7 @@ const esc = (value: string | number | null | undefined): string => {
 function buildInvoiceHtml(data: PrintInvoiceData): string {
   const { saleId, digitalInvoice, pointsRedeemed, pointsRate } = data;
   const inv = digitalInvoice;
-  const symbol = inv?.currency_symbol ?? "₡";
+  const symbol = inv?.currency_symbol ?? "Bs.";
 
   const customerName = inv
     ? `${inv.first_name ?? ""} ${inv.last_name ?? ""}`.trim()
@@ -125,7 +125,6 @@ function buildInvoiceHtml(data: PrintInvoiceData): string {
       row("Factura", fmtDate(inv.invoiced_at)) +
       (inv.due_date ? row("Vence", fmtDateOnly(inv.due_date)) : "") +
       row("Moneda", esc(inv.currency_code ?? "—")) +
-      row("FE", inv.has_electronic_invoice ? "Sí" : "No") +
       (inv.seller_email ? row("Vend.", esc(inv.seller_email)) : "") +
       (saleId ? `<div class="mono-tiny">ID: ${esc(saleId)}</div>` : "")
     : "";
@@ -137,10 +136,7 @@ function buildInvoiceHtml(data: PrintInvoiceData): string {
         items
           .map((it) => {
             const label = it.description || it.variant_name || "—";
-            const codes = [
-              it.sku ? `SKU ${esc(it.sku)}` : "",
-              it.cabys_code ? `CABYS ${esc(it.cabys_code)}` : "",
-            ]
+            const codes = [it.sku ? `SKU ${esc(it.sku)}` : ""]
               .filter(Boolean)
               .join(" | ");
             const qtyLine = `${esc(it.quantity)} x ${fmt(it.unit_price, symbol)}`;

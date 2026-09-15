@@ -53,7 +53,7 @@ export function SegmentMarginConfigModal({
     const raw = margin[config.field as keyof Margin];
     if (raw == null) return "—";
     if (typeId === 1 || typeId === 4) {
-      return `₡${Number(raw).toLocaleString("es-CR", { minimumFractionDigits: 2 })}`;
+      return `Bs. ${Number(raw).toLocaleString("es-VE", { minimumFractionDigits: 2 })}`;
     }
     if (typeId === 2) return `${raw} mes${Number(raw) !== 1 ? "es" : ""}`;
     if (typeId === 3) return `${raw} compra${Number(raw) !== 1 ? "s" : ""}/mes`;

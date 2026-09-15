@@ -140,19 +140,19 @@ export function LoyaltyTab({ tenantId }: { tenantId: string }) {
                 {program.points_earned_per_currency_unit}
               </p>
               <p className="text-xs text-gray-600 mt-1">
-                Puntos por ₡1 gastado
+                Puntos por Bs. 1 gastado
               </p>
             </div>
             <div className="bg-white rounded-lg p-3 text-center">
               <p className="text-2xl font-bold text-gray-900">
                 {program.points_redeemed_per_currency_unit}
               </p>
-              <p className="text-xs text-gray-600 mt-1">Puntos = ₡1 de canje</p>
+              <p className="text-xs text-gray-600 mt-1">Puntos = Bs. 1 de canje</p>
             </div>
             <div className="bg-white rounded-lg p-3 text-center">
               <p className="text-2xl font-bold text-gray-900">
                 {program.minimum_purchase_for_points
-                  ? `₡${Number(program.minimum_purchase_for_points).toLocaleString("es-CR")}`
+                  ? `Bs. ${Number(program.minimum_purchase_for_points).toLocaleString("es-VE")}`
                   : "Sin mínimo"}
               </p>
               <p className="text-xs text-gray-600 mt-1">Compra mínima</p>
@@ -195,7 +195,7 @@ export function LoyaltyTab({ tenantId }: { tenantId: string }) {
           </p>
           <form onSubmit={handleActivate} className="space-y-4 max-w-lg">
             <Input
-              label="Puntos otorgados por ₡1 gastado"
+              label="Puntos otorgados por Bs. 1 gastado"
               type="number"
               placeholder="Ej: 1"
               step="0.01"
@@ -208,11 +208,11 @@ export function LoyaltyTab({ tenantId }: { tenantId: string }) {
                 }))
               }
               error={errors.points_earned_per_currency_unit}
-              hint="Cantidad de puntos que gana el cliente por cada colón gastado"
+              hint="Cantidad de puntos que gana el cliente por cada bolívar gastado"
               required
             />
             <Input
-              label="Puntos necesarios para canjear ₡1"
+              label="Puntos necesarios para canjear Bs. 1"
               type="number"
               placeholder="Ej: 100"
               step="1"
@@ -225,7 +225,7 @@ export function LoyaltyTab({ tenantId }: { tenantId: string }) {
                 }))
               }
               error={errors.points_redeemed_per_currency_unit}
-              hint="Cuántos puntos acumulados equivalen a ₡1 de descuento"
+              hint="Cuántos puntos acumulados equivalen a Bs. 1 de descuento"
               required
             />
             <Input

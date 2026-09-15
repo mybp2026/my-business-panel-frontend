@@ -23,7 +23,7 @@ export interface SalesComponentRow {
   currency_id: number;
   net_sales: string; // neto de descuento, en currency_id
   discounts: string; // en currency_id
-  cogs: string; // costo de ventas, en CRC
+  cogs: string; // costo de ventas, en VES
 }
 
 export interface ReturnsComponentRow {
@@ -31,7 +31,7 @@ export interface ReturnsComponentRow {
   bucket_start: string;
   currency_id: number;
   returns: string; // en currency_id
-  returns_cogs: string; // costo devuelto, en CRC
+  returns_cogs: string; // costo devuelto, en VES
 }
 
 export interface ExpenseComponentRow {

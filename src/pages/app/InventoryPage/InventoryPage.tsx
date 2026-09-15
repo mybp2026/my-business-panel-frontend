@@ -325,8 +325,8 @@ export function InventoryPage() {
               width: "12%",
               render: (value: unknown) => (
                 <span className="font-mono text-gray-900">
-                  ₡{" "}
-                  {Number(value || 0).toLocaleString("es-CR", {
+                  Bs.{" "}
+                  {Number(value || 0).toLocaleString("es-VE", {
                     minimumFractionDigits: 2,
                   })}
                 </span>

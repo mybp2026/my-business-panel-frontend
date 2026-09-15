@@ -4,12 +4,11 @@ import { useLoaderData } from "react-router-dom";
 
 import { SegmentsTab } from "./SegmentsTab";
 import { LoyaltyTab } from "./LoyaltyTab";
-import { HaciendaTab } from "./HaciendaTab";
 import { ExchangeRateTab } from "./ExchangeRateTab";
 import type { Segment } from "@/interfaces/entities/Segment.interface";
 import type { Margin } from "@/interfaces/entities/Margin.interface";
 
-type Tab = "segments" | "loyalty" | "hacienda" | "exchange_rate";
+type Tab = "segments" | "loyalty" | "exchange_rate";
 
 export function SettingsPage() {
   const { segments } = useLoaderData() as { segments: Segment[] };
@@ -22,7 +21,6 @@ export function SettingsPage() {
   const tabs: { key: Tab; label: string }[] = [
     { key: "segments", label: "Segmentos y Márgenes" },
     { key: "loyalty", label: "Programa de Lealtad" },
-    { key: "hacienda", label: "Configuración Hacienda" },
     { key: "exchange_rate", label: "Tasa de Cambio" },
   ];
 
@@ -32,8 +30,8 @@ export function SettingsPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Configuración</h1>
         <p className="text-gray-600">
-          Configura segmentos de clientes, programa de lealtad y datos de
-          Hacienda
+          Configura segmentos de clientes, programa de lealtad y tasa de
+          cambio
         </p>
       </div>
 
@@ -65,7 +63,6 @@ export function SettingsPage() {
             />
           )}
           {activeTab === "loyalty" && <LoyaltyTab tenantId={tenantId} />}
-          {activeTab === "hacienda" && <HaciendaTab tenantId={tenantId} />}
           {activeTab === "exchange_rate" && <ExchangeRateTab />}
         </div>
       </div>

@@ -35,7 +35,7 @@ import type { HrEmployeesPageLoaderData } from "@/router/loaders/hr.loaders";
 import { EmployeeUpsertModal } from "./EmployeeUpsertModal";
 
 const formatCurrency = (value: number) =>
-  `CRC ${Number(value).toLocaleString("es-CR", {
+  `Bs. ${Number(value).toLocaleString("es-VE", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;

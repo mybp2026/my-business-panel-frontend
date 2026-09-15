@@ -1,8 +1,7 @@
 export const identificationTypes = [
-  { value: 1, label: "Cedula fisica" },
-  { value: 2, label: "Cédula jurídica" },
-  { value: 3, label: "DIMEX" },
-  { value: 4, label: "NITE" },
-  { value: 5, label: "Extranjero no domiciliado" },
-  { value: 6, label: "No contribuyente" },
+  { value: 1, label: "Cédula de Identidad (V)" },
+  { value: 2, label: "RIF Persona Jurídica (J)" },
+  { value: 3, label: "Cédula de Identidad Extranjero (E)" },
+  { value: 4, label: "RIF Ente Gubernamental (G)" },
+  { value: 5, label: "Pasaporte (P)" },
 ];

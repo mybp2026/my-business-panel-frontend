@@ -54,7 +54,7 @@ export function FnzIvaPage() {
     useLoaderData() as FnzIvaPageLoaderData;
 
   const crcCurrency =
-    currencies.find((c) => c.currency_code === "CRC") ?? currencies[0];
+    currencies.find((c) => c.currency_code === "VES") ?? currencies[0];
 
   const [displayCurrency, setDisplayCurrency] = useState<Currency>(
     crcCurrency ?? currencies[0],
@@ -105,8 +105,8 @@ export function FnzIvaPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">IVA del Período</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Desglose de impuesto al valor agregado para la declaración a
-            Hacienda CR
+            Desglose de impuesto al valor agregado para la declaración al
+            SENIAT
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -126,7 +126,7 @@ export function FnzIvaPage() {
         <IvaStat
           label="IVA Débito (Ventas)"
           value={fmt(summary?.iva_debito ?? 0)}
-          description="IVA cobrado en ventas con factura aceptada por Hacienda"
+          description="IVA cobrado en ventas facturadas en el período"
           tone="gray"
           loading={loading}
         />
@@ -173,7 +173,7 @@ export function FnzIvaPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-1">
-              IVA Neto a declarar a Hacienda
+              IVA Neto a declarar al SENIAT
             </p>
             <p
               className={`text-4xl font-bold ${
@@ -190,7 +190,7 @@ export function FnzIvaPage() {
               }`}
             >
               {isDebt
-                ? "Deuda con Hacienda CR — monto a pagar"
+                ? "Deuda con el SENIAT — monto a pagar"
                 : "Saldo a favor — aplicar en el siguiente período"}
             </p>
           </div>

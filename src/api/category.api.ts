@@ -41,26 +41,6 @@ export const categoryApi = {
     }
   },
 
-  async searchByCabys(cabysCode: string, limit = 100, offset = 0): Promise<Category[]> {
-    try {
-      const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
-      if (cabysCode) params.set("cabys_code", cabysCode);
-
-      const response = await fetch(`${url}/category?${params}`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
-
-      const json: ApiResponse<Category[]> = await response.json();
-      return json.data;
-    } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : "Error al buscar categorías por código CABYS",
-      );
-    }
-  },
-
   async getById(categoryId: string): Promise<Category> {
     try {
       const response = await fetch(`${url}/category/${categoryId}`, {

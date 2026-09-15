@@ -28,7 +28,7 @@ export function ExpenseRegistrationForm({
   onSuccess,
 }: Props) {
   const crcCurrency =
-    currencies.find((c) => c.currency_code === "CRC") ?? currencies[0];
+    currencies.find((c) => c.currency_code === "VES") ?? currencies[0];
 
   const [form, setForm] = useState({
     category_id: "",
@@ -132,7 +132,7 @@ export function ExpenseRegistrationForm({
           placeholder="Detalle del gasto"
         />
         <Input
-          label={`Monto (${crcCurrency?.symbol ?? "₡"})`}
+          label={`Monto (${crcCurrency?.symbol ?? "Bs."})`}
           type="number"
           min={0.01}
           step="0.01"

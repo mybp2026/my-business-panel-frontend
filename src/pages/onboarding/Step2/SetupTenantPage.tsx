@@ -120,7 +120,7 @@ export function SetupTenantPage() {
       branchAddress: values.branchAddress,
       regionId: Number(values.regionId),
     });
-    navigate("/auth/register/setup-hacienda");
+    navigate("/auth/register/payment");
   };
 
   const regionOptions = regions.map((region) => ({

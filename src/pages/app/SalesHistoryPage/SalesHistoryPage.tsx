@@ -53,9 +53,6 @@ export function SalesHistoryPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [selected, setSelected] = useState<SaleListItem | null>(null);
   const [searchId, setSearchId] = useState("");
-  const [invoiceFilter, setInvoiceFilter] = useState<"all" | "yes" | "no">(
-    "all",
-  );
   const [toast, setToast] = useState<{
     mode: ToastMode;
     message: string;
@@ -80,8 +77,6 @@ export function SalesHistoryPage() {
     ) {
       return false;
     }
-    if (invoiceFilter === "yes" && !s.has_electronic_invoice) return false;
-    if (invoiceFilter === "no" && s.has_electronic_invoice) return false;
     return true;
   });
 
@@ -216,14 +211,6 @@ export function SalesHistoryPage() {
         );
       },
     },
-    {
-      key: "has_electronic_invoice",
-      label: "F. electrónica",
-      width: "11%",
-      render: (v: boolean) => (
-        <Badge variant={v ? "green" : "gray"}>{v ? "Sí" : "No"}</Badge>
-      ),
-    },
   ];
 
   return (
@@ -265,20 +252,6 @@ export function SalesHistoryPage() {
               placeholder="Pegue o escriba un ID de venta"
               value={searchId}
               onChange={(e) => setSearchId(e.target.value)}
-            />
-          </div>
-          <div className="flex-1 max-w-xs">
-            <Select
-              label="Factura electrónica"
-              value={invoiceFilter}
-              onChange={(e) =>
-                setInvoiceFilter(e.target.value as "all" | "yes" | "no")
-              }
-              options={[
-                { value: "all", label: "Todas" },
-                { value: "yes", label: "Con factura electrónica" },
-                { value: "no", label: "Sin factura electrónica" },
-              ]}
             />
           </div>
           <div className="text-sm text-gray-500 md:ml-auto">

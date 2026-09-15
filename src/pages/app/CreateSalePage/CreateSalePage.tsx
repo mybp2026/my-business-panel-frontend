@@ -26,7 +26,7 @@ import {
 import { createCustomer } from "@/router/actions/customer.actions";
 import {
   createFullSale,
-  getDigitalInvoiceForSale,
+  getInvoiceForSale,
 } from "@/router/actions/sale.actions";
 import {
   getCashRegistersByBranch,
@@ -67,7 +67,7 @@ import type { CreateSaleRequest } from "@/interfaces/api/requests/CreateSaleRequ
 import type {
   SaleItemPayload,
   CreateSaleResult,
-  DigitalInvoiceInfo,
+  InvoiceInfo,
 } from "@/interfaces/entities/Sale.interface";
 import type { Column } from "@/interfaces/components/ui/TableProps.interface";
 import type { ToastMode } from "@/interfaces/components/ui/ToastProps.interface";
@@ -164,7 +164,6 @@ export function CreateSalePage() {
   ]);
   const [singlePaymentManuallyEdited, setSinglePaymentManuallyEdited] =
     useState(false);
-  const [hasElectronicInvoice, setHasElectronicInvoice] = useState(false);
   const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
   const [cashRegisterId, setCashRegisterId] = useState("");
   const [openSessions, setOpenSessions] = useState<CashRegisterSession[]>([]);
@@ -202,7 +201,7 @@ export function CreateSalePage() {
   // for the current tenant and re-evaluated against the cart.
   const [defaultPromotions, setDefaultPromotions] = useState<Promotion[]>([]);
 
-  // Exchange rate (CRC <-> USD): fetched from the server on mount, then
+  // Exchange rate (VES <-> USD): fetched from the server on mount, then
   // overridable locally for the current cash-session lifetime. Per spec, the
   // override does not persist to the database — closing the session loses it.
   const [serverExchangeRate, setServerExchangeRate] =
@@ -226,10 +225,8 @@ export function CreateSalePage() {
     open: boolean;
     saleId: string | null;
     total: number;
-    eInvoiceWarning?: string;
-    hadElectronicInvoice: boolean;
     items: SaleReceiptItem[];
-    digitalInvoice: DigitalInvoiceInfo | null;
+    digitalInvoice: InvoiceInfo | null;
     paymentSplits: PaymentSplit[];
     currencySymbol: string;
     pointsRedeemed: number;
@@ -238,11 +235,10 @@ export function CreateSalePage() {
     open: false,
     saleId: null,
     total: 0,
-    hadElectronicInvoice: false,
     items: [],
     digitalInvoice: null,
     paymentSplits: [],
-    currencySymbol: "₡",
+    currencySymbol: "Bs.",
     pointsRedeemed: 0,
     pointsRate: 0,
   });
@@ -445,7 +441,7 @@ export function CreateSalePage() {
   );
 
   const currencySymbol =
-    currencies.find((c) => c.value === currencyId)?.symbol ?? "₡";
+    currencies.find((c) => c.value === currencyId)?.symbol ?? "Bs.";
 
   // Effective rate: cashier override wins if it parses to a positive number;
   // otherwise the server rate is used.
@@ -1278,7 +1274,6 @@ export function CreateSalePage() {
       tax_amount: taxAmountDisplay,
       total_amount: totalAmountDisplay,
       is_completed: !isApartado,
-      has_electronic_invoice: hasElectronicInvoice,
       seller_user_id: user?.user_id,
       due_date:
         (isApartado || isCredit) && dueDate
@@ -1335,7 +1330,7 @@ export function CreateSalePage() {
       if (hasCashPayment) openDrawer();
 
       const [digitalInvoice] = await Promise.all([
-        getDigitalInvoiceForSale(result.saleId),
+        getInvoiceForSale(result.saleId),
       ]);
       const splitPointsTotal = paymentSplits
         .filter((s) => s.methodId === 5)
@@ -1352,8 +1347,6 @@ export function CreateSalePage() {
         open: true,
         saleId: result.saleId ?? null,
         total: totalAmountDisplay,
-        eInvoiceWarning: result.eInvoiceWarning,
-        hadElectronicInvoice: hasElectronicInvoice,
         digitalInvoice: digitalInvoice ?? null,
         items: items.map((item) => ({
           variant_name: item.variant_name,
@@ -1385,7 +1378,6 @@ export function CreateSalePage() {
     setIsWalkInSale(false);
     setItems([]);
     setLastItemAmount(0);
-    setHasElectronicInvoice(false);
     setAppliedPromotion(null);
     setAdMessage("");
     setDueDate("");
@@ -2040,7 +2032,7 @@ export function CreateSalePage() {
             )}
             {currencyId !== CRC_CURRENCY_ID && totalInColones !== null && (
               <p className="text-xs text-emerald-700 mt-1">
-                ≈ {formatAmount(totalInColones, "₡")} ·
+                ≈ {formatAmount(totalInColones, "Bs.")} ·
                 <span className="ml-1 text-emerald-600">
                   tasa{" "}
                   {effectiveExchangeRate.toLocaleString("es-CR", {
@@ -2109,7 +2101,7 @@ export function CreateSalePage() {
                       Cubierto por puntos
                     </p>
                     <p className="text-2xl font-bold text-emerald-900 mt-0.5">
-                      {formatAmount(round2(pointsToRedeem / pointsRate), "₡")}
+                      {formatAmount(round2(pointsToRedeem / pointsRate), "Bs.")}
                     </p>
                     <p className="text-xs text-emerald-700 mt-0.5">
                       Puntos restantes tras compra:{" "}
@@ -2351,7 +2343,7 @@ export function CreateSalePage() {
                             {(() => {
                               const pointsValue = parseFloat(split.amount);
                               const crcEquiv = round2(pointsValue / pointsRate);
-                              return `≈ ${formatAmount(crcEquiv, "₡")}`;
+                              return `≈ ${formatAmount(crcEquiv, "Bs.")}`;
                             })()}
                           </span>
                         ) : null}
@@ -2388,7 +2380,7 @@ export function CreateSalePage() {
                         Number(split.methodId) === 5 &&
                         split.amount &&
                         parseFloat(split.amount) > 0
-                          ? `Equivale a ${formatAmount(round2(parseFloat(split.amount)), "₡")}`
+                          ? `Equivale a ${formatAmount(round2(parseFloat(split.amount)), "Bs.")}`
                           : undefined
                       }
                       onChange={(e) => {
@@ -2430,7 +2422,7 @@ export function CreateSalePage() {
                             parseFloat(split.amount),
                           );
                           if (equiv !== null) {
-                            return `≈ ₡${equiv.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`;
+                            return `≈ Bs. ${equiv.toLocaleString("es-VE", { minimumFractionDigits: 2 })}`;
                           }
                           return "Tasa no disponible";
                         })()}
@@ -2516,19 +2508,7 @@ export function CreateSalePage() {
           onChange={(e) => setAdMessage(e.target.value)}
           hint="El cajero puede incluir un mensaje que aparecerá en la factura digital."
         />
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={hasElectronicInvoice}
-              onChange={(e) => setHasElectronicInvoice(e.target.checked)}
-              className="w-5 h-5 rounded border-gray-300 text-accent-600 focus:ring-accent-400"
-            />
-            <span className="text-sm font-medium text-gray-700">
-              Generar factura electrónica
-            </span>
-          </label>
-
+        <div className="flex flex-col md:flex-row md:items-center justify-end gap-4">
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-500">
               {items.length} producto{items.length !== 1 ? "s" : ""} ·{" "}
@@ -2558,8 +2538,6 @@ export function CreateSalePage() {
         saleId={resultModal.saleId}
         totalAmount={resultModal.total}
         currencySymbol={resultModal.currencySymbol}
-        hasElectronicInvoice={resultModal.hadElectronicInvoice}
-        eInvoiceWarning={resultModal.eInvoiceWarning}
         items={resultModal.items}
         digitalInvoice={resultModal.digitalInvoice}
         paymentSplits={resultModal.paymentSplits}

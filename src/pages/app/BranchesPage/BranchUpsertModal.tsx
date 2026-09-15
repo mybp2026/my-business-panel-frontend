@@ -11,15 +11,12 @@ interface BranchFormState {
   branch_address: string;
   is_main_branch: boolean;
   tenant_id?: string;
-  territorio_code: string;
-  otras_senas: string;
 }
 
 interface BranchFormErrors {
   branch_name?: string;
   branch_number?: string;
   tenant_id?: string;
-  territorio_code?: string;
 }
 
 interface BranchUpsertModalProps {
@@ -105,30 +102,6 @@ export function BranchUpsertModal({
           value={formData.branch_address}
           onChange={(e) =>
             onChange((p) => ({ ...p, branch_address: e.target.value }))
-          }
-        />
-
-        <Input
-          label="Código de territorio"
-          placeholder="Ej: 10101"
-          value={formData.territorio_code}
-          onChange={(e) =>
-            onChange((p) => ({
-              ...p,
-              territorio_code: e.target.value.replace(/\D/g, "").slice(0, 5),
-            }))
-          }
-          error={formErrors.territorio_code}
-          hint="5 dígitos: provincia (1) + cantón (2) + distrito (2). Ej: 10101 = San José / San José / Carmen"
-          maxLength={5}
-        />
-
-        <Input
-          label="Otras senas"
-          placeholder="Detalles adicionales de ubicación para factura electrónica"
-          value={formData.otras_senas}
-          onChange={(e) =>
-            onChange((p) => ({ ...p, otras_senas: e.target.value }))
           }
         />
 

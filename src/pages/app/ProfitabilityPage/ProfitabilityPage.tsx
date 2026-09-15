@@ -17,7 +17,7 @@ import { IconTrendingUp, IconCreditCard, IconCheckCircle } from "@/assets/icons"
 
 import { profitabilityApi } from "@/api/profitability.api";
 import { computeProfitability } from "@/helpers/profitability";
-import { CRC_CURRENCY_ID, formatMoney } from "@/utils/currency";
+import { BASE_CURRENCY_ID, formatMoney } from "@/utils/currency";
 import {
   DEFAULT_PROFITABILITY_INTERVAL,
   PROFITABILITY_INTERVAL_OPTIONS,
@@ -97,7 +97,7 @@ export function ProfitabilityPage() {
     initialRaw.interval ?? DEFAULT_PROFITABILITY_INTERVAL,
   );
   const [selectedBranchId, setSelectedBranchId] = useState("");
-  const [selectedCurrencyId, setSelectedCurrencyId] = useState(CRC_CURRENCY_ID);
+  const [selectedCurrencyId, setSelectedCurrencyId] = useState(BASE_CURRENCY_ID);
   const [loading, setLoading] = useState(false);
 
   // Filtros (intervalo + sucursal) re-consultan al backend (regla del repo).
@@ -140,7 +140,7 @@ export function ProfitabilityPage() {
   );
 
   const fmt = (value: number) =>
-    formatMoney(value, currency?.currency_code ?? "CRC", currency?.symbol ?? "₡");
+    formatMoney(value, currency?.currency_code ?? "VES", currency?.symbol ?? "Bs.");
 
   return (
     <div className="p-6 lg:p-8">
