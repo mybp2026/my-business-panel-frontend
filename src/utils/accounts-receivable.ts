@@ -8,9 +8,9 @@ type BadgeTone =
   | "secondary"
   | "accent";
 
-const currencyFormatter = new Intl.NumberFormat("es-CR", {
+const currencyFormatter = new Intl.NumberFormat("es-VE", {
   style: "currency",
-  currency: "CRC",
+  currency: "VES",
   maximumFractionDigits: 2,
 });
 
@@ -18,11 +18,11 @@ export const formatCurrency = (value?: NumericLike | null) =>
   currencyFormatter.format(Number(value ?? 0));
 
 export const formatDate = (value?: string | null) =>
-  value ? new Date(value).toLocaleDateString("es-CR") : "—";
+  value ? new Date(value).toLocaleDateString("es-VE") : "—";
 
 export const formatDateTime = (value?: string | null) =>
   value
-    ? new Date(value).toLocaleString("es-CR", {
+    ? new Date(value).toLocaleString("es-VE", {
         dateStyle: "short",
         timeStyle: "short",
       })

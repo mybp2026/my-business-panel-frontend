@@ -39,20 +39,20 @@ import type { Column } from "@/interfaces/components/ui/TableProps.interface";
 
 const fmtMoney = (value: number) => formatMoney(value, "VES", "Bs.");
 const fmtPoints = (value: number) =>
-  `${Number(value ?? 0).toLocaleString("es-CR")} pts`;
+  `${Number(value ?? 0).toLocaleString("es-VE")} pts`;
 
 function formatBucketLabel(iso: string, unit: BucketUnit): string {
   const d = new Date(iso);
   switch (unit) {
     case "hour":
-      return d.toLocaleTimeString("es-CR", {
+      return d.toLocaleTimeString("es-VE", {
         hour: "2-digit",
         minute: "2-digit",
       });
     case "month":
-      return d.toLocaleDateString("es-CR", { month: "short", year: "2-digit" });
+      return d.toLocaleDateString("es-VE", { month: "short", year: "2-digit" });
     default:
-      return d.toLocaleDateString("es-CR", { day: "2-digit", month: "2-digit" });
+      return d.toLocaleDateString("es-VE", { day: "2-digit", month: "2-digit" });
   }
 }
 
@@ -244,7 +244,7 @@ export function LoyaltyFinancePage() {
                 <>
                   {" · "}
                   <span className="font-medium text-gray-800">
-                    {redeemRate.toLocaleString("es-CR")} pts
+                    {redeemRate.toLocaleString("es-VE")} pts
                   </span>{" "}
                   = Bs. 1
                 </>

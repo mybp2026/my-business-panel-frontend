@@ -19,7 +19,7 @@ import type {
 import type { RoyaltiesPageLoaderData } from "@/router/loaders/royalties.loaders";
 
 const fmt = (v: number) =>
-  `CRC ${Number(v).toLocaleString("es-CR", { minimumFractionDigits: 2 })}`;
+  `Bs. ${Number(v).toLocaleString("es-VE", { minimumFractionDigits: 2 })}`;
 
 export function RoyaltiesPage() {
   const {
@@ -431,7 +431,7 @@ export function RoyaltiesPage() {
             {showNewRule && (
               <div className="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200 flex flex-col gap-2">
                 <Input
-                  label="Monto minimo (CRC)"
+                  label="Monto minimo (Bs.)"
                   type="number"
                   min={0.01}
                   step="0.01"

@@ -22,7 +22,7 @@ const fmt = (value?: number | string | null) => {
 };
 
 const fmtDate = (value?: string | null) =>
-  value ? new Date(value).toLocaleString("es-CR") : "—";
+  value ? new Date(value).toLocaleString("es-VE") : "—";
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (

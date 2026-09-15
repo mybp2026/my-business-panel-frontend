@@ -9,7 +9,7 @@ import type {
 const formatDateTime = (value?: string | null) => {
   if (!value) return "—";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("es-CR");
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("es-VE");
 };
 
 const formatDate = (value?: string | null) => {
@@ -17,7 +17,7 @@ const formatDate = (value?: string | null) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? value
-    : date.toLocaleDateString("es-CR", {
+    : date.toLocaleDateString("es-VE", {
         year: "numeric",
         month: "long",
         day: "2-digit",
@@ -26,7 +26,7 @@ const formatDate = (value?: string | null) => {
 
 const formatCurrency = (value?: number | string | null) => {
   if (value == null || value === "") return "—";
-  return `CRC ${Number(value).toLocaleString("es-CR", {
+  return `Bs. ${Number(value).toLocaleString("es-VE", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;

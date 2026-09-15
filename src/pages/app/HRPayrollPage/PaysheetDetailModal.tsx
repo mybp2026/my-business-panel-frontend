@@ -22,7 +22,7 @@ interface PaysheetDetailModalProps {
 }
 
 const formatCurrency = (value: number) =>
-  `CRC ${Number(value).toLocaleString("es-CR", {
+  `Bs. ${Number(value).toLocaleString("es-VE", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;

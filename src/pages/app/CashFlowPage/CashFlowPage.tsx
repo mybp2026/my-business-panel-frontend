@@ -72,12 +72,12 @@ interface BucketChartPoint {
 function formatBucketLabel(dateStr: string, groupBy: CashFlowGroupBy): string {
   const d = new Date(dateStr);
   if (groupBy === "monthly") {
-    return d.toLocaleDateString("es-CR", { month: "short", year: "2-digit" });
+    return d.toLocaleDateString("es-VE", { month: "short", year: "2-digit" });
   }
   if (groupBy === "weekly") {
-    return d.toLocaleDateString("es-CR", { day: "2-digit", month: "short" });
+    return d.toLocaleDateString("es-VE", { day: "2-digit", month: "short" });
   }
-  return d.toLocaleDateString("es-CR", { day: "2-digit", month: "short" });
+  return d.toLocaleDateString("es-VE", { day: "2-digit", month: "short" });
 }
 
 function computeChartData(
@@ -252,7 +252,7 @@ function ProjectionsTable({
                 className="border-b border-gray-50 hover:bg-gray-50"
               >
                 <td className="py-2.5 pr-4 font-mono text-xs text-gray-600">
-                  {new Date(p.projection_date).toLocaleDateString("es-CR")}
+                  {new Date(p.projection_date).toLocaleDateString("es-VE")}
                 </td>
                 <td className="py-2.5 pr-4">
                   <span
