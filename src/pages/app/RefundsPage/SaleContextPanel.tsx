@@ -81,59 +81,30 @@ export function SaleContextPanel({
               <Badge variant={context.sale.is_completed ? "green" : "yellow"}>
                 {context.sale.is_completed ? "Completada" : "Pendiente"}
               </Badge>
-              {context.sale.has_electronic_invoice && (
-                <Badge variant="blue">Factura electrónica</Badge>
-              )}
             </div>
           }
         />
       </div>
 
-      {context.digital_invoice && (
+      {context.invoice && (
         <InvoiceSection
-          title="Factura digital"
+          title="Factura"
           rows={[
             {
               label: "ID",
               mono: true,
-              value: context.digital_invoice.digital_sale_invoice_id,
+              value: context.invoice.invoice_id,
             },
             {
               label: "Emitida",
-              value: formatDate(context.digital_invoice.invoiced_at),
+              value: formatDate(context.invoice.invoiced_at),
             },
             {
               label: "Total",
               value: formatCurrency(
-                context.digital_invoice.total_amount,
+                context.invoice.total_amount,
                 currencySymbol,
               ),
-            },
-          ]}
-        />
-      )}
-
-      {context.electronic_invoice && (
-        <InvoiceSection
-          title="Factura electrónica"
-          rows={[
-            {
-              label: "ID",
-              mono: true,
-              value: context.electronic_invoice.electronic_sale_invoice_id,
-            },
-            {
-              label: "Consecutivo",
-              value: context.electronic_invoice.consecutive_number ?? "—",
-            },
-            {
-              label: "Clave",
-              mono: true,
-              value: context.electronic_invoice.key_number ?? "—",
-            },
-            {
-              label: "Emitida",
-              value: formatDate(context.electronic_invoice.created_at),
             },
           ]}
         />

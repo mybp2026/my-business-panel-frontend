@@ -3,7 +3,6 @@ import { Navigate } from 'react-router-dom';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { RegisterPage } from '@/pages/onboarding/Step1/RegisterPage';
 import { SetupTenantPage } from '@/pages/onboarding/Step2/SetupTenantPage';
-import { SetupHaciendaPage } from '@/pages/onboarding/Step3/SetupHaciendaPage';
 import { PaymentPage } from '@/pages/onboarding/Step4/PaymentPage';
 import { SuccessPage } from '@/pages/onboarding/SuccessPage';
 import { getRegions } from '../loaders/region.loaders';
@@ -22,7 +21,6 @@ export const publicRoutes: RouteObject[] = [
     element: <SetupTenantPage />,
     loader: getRegions,
   },
-  { path: '/auth/register/setup-hacienda', element: <SetupHaciendaPage /> },
   { path: '/auth/register/payment', element: <PaymentPage /> },
   { path: '/auth/register/success', element: <SuccessPage /> },
 ];

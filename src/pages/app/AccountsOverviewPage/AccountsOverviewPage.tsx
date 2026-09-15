@@ -416,7 +416,7 @@ export function AccountsOverviewPage() {
   // Currency formatting
   const currencySymbol =
     currencies.find((c) => Number(c.currency_id) === selectedCurrencyId)
-      ?.symbol ?? "₡";
+      ?.symbol ?? "Bs.";
   const fmt = (value: number | string | null | undefined) =>
     formatAmount(value, selectedCurrencyId, exchangeRates, currencySymbol);
 

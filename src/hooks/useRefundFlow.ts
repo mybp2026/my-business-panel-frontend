@@ -50,7 +50,7 @@ export function useRefundFlow({ initialReturns }: UseRefundFlowArgs) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
 
-  const currencySymbol = context?.sale.currency_symbol ?? "₡";
+  const currencySymbol = context?.sale.currency_symbol ?? "Bs.";
 
   const productsToRefund = useMemo(() => {
     if (!context) return [];

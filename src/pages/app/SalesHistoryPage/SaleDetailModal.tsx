@@ -4,13 +4,11 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { usePrintInvoice } from "@/hooks/usePrintInvoice";
 import {
-  getDigitalInvoiceForSale,
-  getElectronicInvoiceForSale,
+  getInvoiceForSale,
   getSaleItemsForSale,
 } from "@/router/actions/sale.actions";
 import type {
-  DigitalInvoiceInfo,
-  ElectronicInvoiceInfo,
+  InvoiceInfo,
   SaleItemDetail,
   SaleListItem,
 } from "@/interfaces/entities/Sale.interface";
@@ -22,10 +20,10 @@ interface SaleDetailModalProps {
 }
 
 const formatDateTime = (value?: string | null) =>
-  value ? new Date(value).toLocaleString("es-CR") : "—";
+  value ? new Date(value).toLocaleString("es-VE") : "—";
 
 const formatCurrency = (value: number | null | undefined, symbol: string) =>
-  `${symbol} ${Number(value ?? 0).toLocaleString("es-CR", {
+  `${symbol} ${Number(value ?? 0).toLocaleString("es-VE", {
     minimumFractionDigits: 2,
   })}`;
 
@@ -35,36 +33,30 @@ export function SaleDetailModal({
   onClose,
 }: SaleDetailModalProps) {
   const [digitalInvoice, setDigitalInvoice] =
-    useState<DigitalInvoiceInfo | null>(null);
-  const [electronicInvoice, setElectronicInvoice] =
-    useState<ElectronicInvoiceInfo | null>(null);
+    useState<InvoiceInfo | null>(null);
   const [saleItems, setSaleItems] = useState<SaleItemDetail[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !sale) {
       setDigitalInvoice(null);
-      setElectronicInvoice(null);
       setSaleItems([]);
       return;
     }
     let cancelled = false;
     setIsLoading(true);
     Promise.all([
-      getDigitalInvoiceForSale(sale.sale_id),
-      getElectronicInvoiceForSale(sale.sale_id),
+      getInvoiceForSale(sale.sale_id),
       getSaleItemsForSale(sale.sale_id),
     ])
-      .then(([digital, electronic, items]) => {
+      .then(([invoice, items]) => {
         if (cancelled) return;
-        setDigitalInvoice(digital);
-        setElectronicInvoice(electronic);
+        setDigitalInvoice(invoice);
         setSaleItems(items);
       })
       .catch(() => {
         if (!cancelled) {
           setDigitalInvoice(null);
-          setElectronicInvoice(null);
           setSaleItems([]);
         }
       })
@@ -133,14 +125,6 @@ export function SaleDetailModal({
           <Field
             label="Total"
             value={formatCurrency(sale.total_amount, symbol)}
-          />
-          <Field
-            label="Factura electrónica"
-            valueNode={
-              <Badge variant={sale.has_electronic_invoice ? "green" : "gray"}>
-                {sale.has_electronic_invoice ? "Sí" : "No"}
-              </Badge>
-            }
           />
         </div>
 
@@ -253,10 +237,10 @@ export function SaleDetailModal({
           </div>
         )}
 
-        {/* ── Factura digital ──────────────────────────────────────────── */}
+        {/* ── Factura ───────────────────────────────────────────────────── */}
         <div>
             <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
-              Factura digital
+              Factura
             </h3>
             {isLoading ? (
               <p className="text-sm text-gray-400">Cargando…</p>
@@ -318,45 +302,11 @@ export function SaleDetailModal({
               </div>
             ) : (
               <p className="text-sm text-gray-400">
-                No hay factura digital registrada.
+                No hay factura registrada.
               </p>
             )}
           </div>
 
-        {/* ── Factura electrónica ────────────────────────────────────── */}
-        {!isLoading && electronicInvoice && (
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
-              Factura electrónica
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 border border-gray-200 rounded-xl p-4">
-              <Field
-                label="Fecha de factura"
-                value={formatDateTime(electronicInvoice.created_at)}
-              />
-              <Field
-                label="Clave"
-                value={electronicInvoice.key_number}
-                mono
-              />
-              <Field
-                label="Consecutivo"
-                value={electronicInvoice.consecutive_number}
-                mono
-              />
-              <Field
-                label="Estado"
-                value={String(electronicInvoice.status_id ?? "—")}
-              />
-              <Field
-                label="Respuesta Hacienda"
-                value={formatDateTime(
-                  electronicInvoice.hacienda_response_date ?? undefined,
-                )}
-              />
-            </div>
-          </div>
-        )}
         <div className="flex justify-end pt-2">
           <Button
             variant="secondary"

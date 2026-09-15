@@ -68,14 +68,9 @@ export function ReturnDetailModal({
             <InfoField label="Cliente" value={customerName} />
             <InfoField label="Documento" value={tx.customer_document ?? "—"} />
             <InfoField
-              label="Factura digital"
+              label="Factura"
               mono
-              value={tx.digital_sale_invoice_id ?? "—"}
-            />
-            <InfoField
-              label="Factura electrónica"
-              mono
-              value={tx.electronic_consecutive ?? tx.electronic_sale_invoice_id ?? "—"}
+              value={tx.invoice_id ?? "—"}
             />
           </div>
 

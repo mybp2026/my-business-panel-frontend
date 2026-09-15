@@ -19,7 +19,7 @@ export const THRESHOLD_FIELD_CONFIG: Record<
 > = {
   1: {
     field: "spending_threshold",
-    label: "Umbral de Gasto (₡)",
+    label: "Umbral de Gasto (Bs.)",
     isInteger: false,
     description: "Monto total acumulado para alcanzar este segmento",
   },

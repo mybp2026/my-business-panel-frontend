@@ -14,7 +14,6 @@ export interface SaleListItem {
   branch_name: string;
   currency_code: string;
   symbol: string;
-  has_electronic_invoice?: boolean;
   is_refunded?: boolean;
   tenant_customer_id?: string;
   created_at?: string;
@@ -50,15 +49,13 @@ export interface SalePaymentPayload {
 
 export interface CreateSaleResult {
   saleId: string;
-  eInvoiceWarning?: string;
 }
 
-export interface DigitalInvoiceItem {
-  digital_sale_invoice_item_id: string;
+export interface InvoiceItem {
+  invoice_item_id: string;
   description: string | null;
   sku: string | null;
   variant_name: string | null;
-  cabys_code: string | null;
   quantity: number;
   unit_price: number;
   subtotal: number;
@@ -67,7 +64,7 @@ export interface DigitalInvoiceItem {
   total_price: number;
 }
 
-export interface DigitalInvoicePayment {
+export interface InvoicePayment {
   customer_payment_id: string;
   payment_method_id: number | null;
   payment_method_name: string | null;
@@ -80,8 +77,8 @@ export interface DigitalInvoicePayment {
   payment_date: string;
 }
 
-export interface DigitalInvoiceInfo {
-  digital_sale_invoice_id: string;
+export interface InvoiceInfo {
+  invoice_id: string;
   subtotal_amount: number;
   tax_amount: number;
   total_amount: number;
@@ -117,13 +114,12 @@ export interface DigitalInvoiceInfo {
   sale_condition: string | null;
   sale_condition_desc: string | null;
   sale_date: string;
-  has_electronic_invoice: boolean;
   seller_user_id: string | null;
   seller_email: string | null;
   currency_code: string | null;
   currency_symbol: string | null;
-  items: DigitalInvoiceItem[];
-  payments: DigitalInvoicePayment[];
+  items: InvoiceItem[];
+  payments: InvoicePayment[];
 }
 
 export interface SaleItemDetail {
@@ -136,16 +132,4 @@ export interface SaleItemDetail {
   original_price?: number | null;
   discount_applied?: number | null;
   promotion_name?: string | null;
-}
-
-export interface ElectronicInvoiceInfo {
-  electronic_sale_invoice_id: string;
-  sale_id: string;
-  key_number: string;
-  consecutive_number: string;
-  status_id: number;
-  hacienda_response_xml?: string | null;
-  hacienda_response_date?: string | null;
-  created_at: string;
-  updated_at?: string;
 }

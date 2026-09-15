@@ -8,7 +8,7 @@ interface RefundModeTabsProps {
 const HINTS: Record<RefundMode, string> = {
   partial:
     "Selecciona uno o más productos de la factura para reembolsar. La factura se actualiza automáticamente.",
-  full: "Elimina los registros de factura digital (y electrónica si aplica) asociados a la venta.",
+  full: "Elimina el registro de factura asociado a la venta.",
 };
 
 export function RefundModeTabs({ mode, onChange }: RefundModeTabsProps) {

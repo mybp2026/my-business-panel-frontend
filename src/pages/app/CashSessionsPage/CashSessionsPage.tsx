@@ -696,7 +696,7 @@ export function CashSessionsPage() {
                   <div className="text-sm font-medium text-gray-700">
                     Total cierre:{" "}
                     <span className="font-mono text-gray-900">
-                      ₡{" "}
+                      Bs.{" "}
                       {(
                         (parseAmount(cashAmount) || 0) +
                         (parseAmount(debitAmount) || 0) +

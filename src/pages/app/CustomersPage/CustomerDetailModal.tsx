@@ -244,7 +244,7 @@ export function CustomerDetailModal({
                     {field(
                       "Compra mínima para ganar puntos",
                       detail.minimum_purchase_for_points != null
-                        ? `₡${Number(detail.minimum_purchase_for_points).toLocaleString()}`
+                        ? `Bs. ${Number(detail.minimum_purchase_for_points).toLocaleString()}`
                         : null,
                     )}
                   </div>
@@ -297,15 +297,13 @@ export function CustomerDetailModal({
                           <td className="py-2 pr-3 text-xs">{s.branch_name ?? "—"}</td>
                           <td className="py-2 pr-3 text-right font-medium">
                             {s.currency_symbol}
-                            {Number(s.total_amount).toLocaleString("es-CR", {
+                            {Number(s.total_amount).toLocaleString("es-VE", {
                               minimumFractionDigits: 2,
                             })}
                           </td>
                           <td className="py-2 pr-3 text-xs">{s.currency_code}</td>
                           <td className="py-2 pr-3 text-xs">
-                            {s.has_electronic_invoice
-                              ? s.electronic_consecutive ?? "Elect."
-                              : "Digital"}
+                            {s.invoice_id ? "Sí" : "—"}
                           </td>
                           <td className="py-2">
                             {isRefunded ? (

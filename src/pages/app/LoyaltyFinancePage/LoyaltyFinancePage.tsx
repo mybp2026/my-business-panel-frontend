@@ -37,7 +37,7 @@ import type {
 } from "@/interfaces/entities/LoyaltyFinance.interface";
 import type { Column } from "@/interfaces/components/ui/TableProps.interface";
 
-const fmtMoney = (value: number) => formatMoney(value, "CRC", "₡");
+const fmtMoney = (value: number) => formatMoney(value, "VES", "Bs.");
 const fmtPoints = (value: number) =>
   `${Number(value ?? 0).toLocaleString("es-CR")} pts`;
 
@@ -246,7 +246,7 @@ export function LoyaltyFinancePage() {
                   <span className="font-medium text-gray-800">
                     {redeemRate.toLocaleString("es-CR")} pts
                   </span>{" "}
-                  = ₡1
+                  = Bs. 1
                 </>
               )}
             </>

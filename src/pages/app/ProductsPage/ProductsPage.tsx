@@ -274,9 +274,7 @@ export function ProductsPage() {
       sku: data.sku,
       product_name: data.product_name,
       description: data.description,
-      category_id: data.category_id,
       price: data.price,
-      cabys_code: data.cabys_code,
       tenant_id: data.tenant_id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -652,7 +650,7 @@ export function ProductsPage() {
               render: (_: unknown, row: Product) => {
                 const cost = (row as ProductWithVariant).cost_price;
                 return cost != null ? (
-                  `₡${Number(cost).toLocaleString("es-CR")}`
+                  `Bs. ${Number(cost).toLocaleString("es-VE")}`
                 ) : (
                   <span className="text-gray-400 text-xs">—</span>
                 );
@@ -663,7 +661,7 @@ export function ProductsPage() {
               label: "Precio venta",
               width: "14%",
               render: (_: unknown, row: Product) =>
-                `₡${getProductPrice(row as ProductWithVariant).toLocaleString("es-CR")}`,
+                `Bs. ${getProductPrice(row as ProductWithVariant).toLocaleString("es-VE")}`,
             },
             ...(isSuperAdmin
               ? [
@@ -790,8 +788,6 @@ export function ProductsPage() {
               sku: product.sku,
               product_name: product.product_name,
               variant_name: product.product_name,
-              category_id: product.cabys_code,
-              cabys_code: product.cabys_code,
               tenant_id: product.tenant_id,
               price: product.price,
               unit_price: product.price,

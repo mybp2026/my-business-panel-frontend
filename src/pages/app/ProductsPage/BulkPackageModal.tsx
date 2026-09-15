@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
-import { CategoryComboBox } from "@/components/ui/CategoryComboBox";
 import { GroupAssignmentEditor } from "@/components/ui/GroupAssignmentEditor";
 import {
   AttributeAssignmentEditor,
@@ -29,7 +28,6 @@ interface BulkPackageModalProps {
     tempId: string;
     sku: string;
     product_name: string;
-    cabys_code: string;
     price: number;
     cost_price: number;
     supplier_id?: string;
@@ -44,8 +42,6 @@ interface BulkPackageModalProps {
 interface ParentForm {
   sku: string;
   name: string;
-  cabys_code: string;
-  cabys_name: string;
   supplier_id: string;
 }
 
@@ -66,8 +62,6 @@ interface ComponentForm {
 const EMPTY_PARENT: ParentForm = {
   sku: "",
   name: "",
-  cabys_code: "",
-  cabys_name: "",
   supplier_id: "",
 };
 
@@ -188,8 +182,6 @@ export function BulkPackageModal({
             (parentData as { variant_name?: string }).variant_name ??
             parentData.product_name ??
             "",
-          cabys_code: parentData.cabys_code ?? "",
-          cabys_name: (parentData as { product_name?: string }).product_name ?? "",
           supplier_id: parentData.supplier_id ?? "",
         });
         setParentGroupIds(
@@ -361,9 +353,6 @@ export function BulkPackageModal({
     if (!tenantId) return "No se identificó el tenant";
     if (!parent.sku.trim()) return "El SKU del lote es obligatorio";
     if (!parent.name.trim()) return "El nombre del lote es obligatorio";
-    if (!parent.cabys_code || parent.cabys_code.length !== 13) {
-      return "Seleccione un código CABYS válido para el lote";
-    }
     if (components.length === 0) {
       return "Agrega al menos un componente";
     }
@@ -404,10 +393,7 @@ export function BulkPackageModal({
     return null;
   };
 
-  const buildChildPayload = (
-    c: ComponentForm,
-    cabys: string,
-  ): BulkProductInput => {
+  const buildChildPayload = (c: ComponentForm): BulkProductInput => {
     const unitPrice = useUniformPricing
       ? parseFloat(uniformPrice) || 0
       : parseFloat(c.unit_price) || 0;
@@ -418,7 +404,6 @@ export function BulkPackageModal({
       tenant_id: tenantId,
       sku: c.sku.trim().toUpperCase(),
       variant_name: c.name.trim(),
-      cabys_code: cabys,
       unit_price: unitPrice,
       cost_price: costPrice,
       attribute_value_ids: c.attributes.flatMap((r) => r.selected_value_ids),
@@ -431,7 +416,6 @@ export function BulkPackageModal({
 
   const handleEditSubmit = async () => {
     if (!editingProductId) return;
-    const cabys = parent.cabys_code;
 
     const parentTotalPrice = components.reduce((acc, c) => {
       const price = useUniformPricing
@@ -450,8 +434,6 @@ export function BulkPackageModal({
       sku: parent.sku.trim().toUpperCase(),
       variant_name: parent.name.trim(),
       product_name: parent.name.trim(),
-      cabys_code: cabys,
-      category_id: cabys,
       unit_price: Number(parentTotalPrice.toFixed(2)),
       cost_price: Number(parentTotalCost.toFixed(2)),
       supplier_id: parent.supplier_id || null,
@@ -468,13 +450,11 @@ export function BulkPackageModal({
 
     await Promise.all(
       existingRows.map((c) => {
-        const payload = buildChildPayload(c, cabys);
+        const payload = buildChildPayload(c);
         const update: UpdateProductRequest = {
           sku: payload.sku,
           variant_name: payload.variant_name,
           product_name: payload.variant_name,
-          cabys_code: payload.cabys_code ?? undefined,
-          category_id: payload.cabys_code ?? undefined,
           unit_price: payload.unit_price,
           cost_price: payload.cost_price,
           supplier_id: payload.supplier_id ?? null,
@@ -490,7 +470,7 @@ export function BulkPackageModal({
     let createdNew: Array<{ product_variant_id: string }> = [];
     if (newRows.length > 0) {
       createdNew = await productApi.createBulk(
-        newRows.map((c) => buildChildPayload(c, cabys)),
+        newRows.map((c) => buildChildPayload(c)),
       );
       if (createdNew.length !== newRows.length) {
         throw new Error(
@@ -544,10 +524,8 @@ export function BulkPackageModal({
       return;
     }
 
-    const cabys = parent.cabys_code;
-
     const childInputs: BulkProductInput[] = components.map((c) =>
-      buildChildPayload(c, cabys),
+      buildChildPayload(c),
     );
 
     const optimisticTotalPrice = Number(
@@ -575,7 +553,6 @@ export function BulkPackageModal({
         tempId,
         sku: parent.sku.trim().toUpperCase(),
         product_name: parent.name.trim(),
-        cabys_code: cabys,
         price: optimisticTotalPrice,
         cost_price: optimisticTotalCost,
         supplier_id: parent.supplier_id || undefined,
@@ -605,8 +582,6 @@ export function BulkPackageModal({
         tenant_id: tenantId,
         sku: parent.sku.trim().toUpperCase(),
         product_name: parent.name.trim(),
-        category_id: cabys,
-        cabys_code: cabys,
         price: Number(parentTotalPrice.toFixed(2)),
         cost_price: Number(parentTotalCost.toFixed(2)),
         supplier_id: parent.supplier_id || undefined,
@@ -701,21 +676,6 @@ export function BulkPackageModal({
               ? `Los SKUs de los componentes comenzarán con "${parent.sku || "[SKU]"}-"`
               : "Ingresa el SKU completo para cada componente"}
           </p>
-
-          <CategoryComboBox
-            label="Categoría CABYS"
-            value={parent.cabys_code}
-            displayValue={parent.cabys_name}
-            onChange={(id, name) =>
-              setParent((p) => ({
-                ...p,
-                cabys_code: id,
-                cabys_name: name,
-              }))
-            }
-            hint="Se aplicará el mismo CABYS al lote y a todos los componentes."
-            required
-          />
 
           <div>
             <Select
@@ -927,12 +887,12 @@ export function BulkPackageModal({
                 {useUniformPricing ? (
                   <div className="rounded-lg bg-blue-50 border border-blue-100 p-3">
                     <p className="text-xs text-blue-700">
-                      Precio: ₡
-                      {Number(uniformPrice || 0).toLocaleString("es-CR", {
+                      Precio: Bs.
+                      {Number(uniformPrice || 0).toLocaleString("es-VE", {
                         minimumFractionDigits: 2,
                       })}{" "}
-                      | Costo: ₡
-                      {Number(uniformCost || 0).toLocaleString("es-CR", {
+                      | Costo: Bs.
+                      {Number(uniformCost || 0).toLocaleString("es-VE", {
                         minimumFractionDigits: 2,
                       })}
                     </p>
@@ -1016,8 +976,8 @@ export function BulkPackageModal({
                       Precio de venta total
                     </p>
                     <p className="font-semibold text-blue-900">
-                      ₡
-                      {totalSalePrice.toLocaleString("es-CR", {
+                      Bs.
+                      {totalSalePrice.toLocaleString("es-VE", {
                         minimumFractionDigits: 2,
                       })}
                     </p>
@@ -1025,8 +985,8 @@ export function BulkPackageModal({
                   <div>
                     <p className="text-xs text-blue-500">Costo total</p>
                     <p className="font-semibold text-blue-900">
-                      ₡
-                      {totalCost.toLocaleString("es-CR", {
+                      Bs.
+                      {totalCost.toLocaleString("es-VE", {
                         minimumFractionDigits: 2,
                       })}
                     </p>
@@ -1034,8 +994,8 @@ export function BulkPackageModal({
                   <div>
                     <p className="text-xs text-blue-500">Margen</p>
                     <p className="font-semibold text-blue-900">
-                      ₡
-                      {margin.toLocaleString("es-CR", {
+                      Bs.
+                      {margin.toLocaleString("es-VE", {
                         minimumFractionDigits: 2,
                       })}{" "}
                       ({marginPercent}%)

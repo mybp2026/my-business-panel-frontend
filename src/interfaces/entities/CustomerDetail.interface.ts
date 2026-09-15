@@ -41,14 +41,11 @@ export interface CustomerSaleHistoryItem {
   tax_amount: number;
   total_amount: number;
   is_completed: boolean;
-  has_electronic_invoice: boolean;
   currency_code: string;
   currency_symbol: string;
   branch_name?: string;
-  digital_sale_invoice_id?: string;
+  invoice_id?: string;
   digital_invoiced_at?: string;
-  electronic_sale_invoice_id?: string;
-  electronic_consecutive?: string;
   return_transaction_id?: string;
   return_status_id?: number;
   total_refund_amount?: number;

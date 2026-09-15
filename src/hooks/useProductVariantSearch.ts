@@ -128,7 +128,6 @@ export function useProductVariantSearch({
       const row: ProductVariantRow = {
         product_id: id,
         product_name: value.variant_name ?? "",
-        category_id: "",
         tenant_id: tenantId,
         created_at: "",
         updated_at: "",

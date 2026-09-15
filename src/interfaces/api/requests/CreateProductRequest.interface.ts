@@ -3,10 +3,8 @@ export interface CreateProductRequest {
   sku: string;
   product_name: string;
   description?: string;
-  category_id: string;
   price: number;
   cost_price?: number;
-  cabys_code?: string;
   supplier_id?: string;
   giftable?: boolean;
   giftable_from?: number;

@@ -31,14 +31,14 @@ const TYPE_OPTIONS = [
 ];
 
 const METHOD_OPTIONS = [
-  { value: "fixed", label: "Fijo (monto en ₡)" },
+  { value: "fixed", label: "Fijo (monto en Bs.)" },
   { value: "percentage", label: "Porcentaje del salario" },
   { value: "formula", label: "Fórmula del sistema" },
   { value: "manual", label: "Manual (se ingresa al procesar)" },
 ];
 
 const METHOD_HINTS: Record<CalcMethod, string> = {
-  fixed: "Monto fijo en colones (₡) que se aplica tal cual en cada nómina.",
+  fixed: "Monto fijo en bolivares (Bs.) que se aplica tal cual en cada nómina.",
   percentage: "Porcentaje del salario base. Ej: 10.67 = 10.67%.",
   formula: "Usa un código de fórmula del sistema (elija el código abajo).",
   manual: "El monto se ingresa manualmente al procesar la nómina.",
@@ -153,7 +153,7 @@ export function ConceptUpsertModal({
   const valueLabel = useMemo(() => {
     switch (calcMethod) {
       case "fixed":
-        return "Monto (₡)";
+        return "Monto (Bs.)";
       case "percentage":
         return "Porcentaje (%)";
       case "formula":

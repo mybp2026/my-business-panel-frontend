@@ -13,7 +13,7 @@ type BadgeTone =
 // --- Generic currency utilities ---
 
 export function formatInCurrency(amount: number, currency: Currency): string {
-  return new Intl.NumberFormat("es-CR", {
+  return new Intl.NumberFormat("es-VE", {
     style: "currency",
     currency: currency.currency_code,
     maximumFractionDigits: 2,
@@ -36,16 +36,16 @@ export function convertAmount(
   return rate ? amount * Number(rate.rate) : amount;
 }
 
-// Backward-compatible CRC formatter — delegates to formatInCurrency
-const CRC_CURRENCY: Currency = {
+// Backward-compatible base-currency formatter — delegates to formatInCurrency
+const BASE_CURRENCY: Currency = {
   currency_id: 1,
-  currency_code: "CRC",
-  currency_name: "Colón Costarricense",
-  symbol: "₡",
+  currency_code: "VES",
+  currency_name: "Bolívar",
+  symbol: "Bs.",
 };
 
 export const formatCurrency = (value?: NumericLike | null) =>
-  formatInCurrency(Number(value ?? 0), CRC_CURRENCY);
+  formatInCurrency(Number(value ?? 0), BASE_CURRENCY);
 
 export const formatDate = (value?: string | null) =>
   value ? new Date(value).toLocaleDateString("es-CR") : "—";

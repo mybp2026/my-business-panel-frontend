@@ -3,9 +3,9 @@ import type { Currency } from "@/interfaces/entities/Currency.interface";
 export const DISPLAY_CURRENCIES: Currency[] = [
   {
     currency_id: 1,
-    currency_code: "CRC",
-    currency_name: "Colón Costarricense",
-    symbol: "₡",
+    currency_code: "VES",
+    currency_name: "Bolívar",
+    symbol: "Bs.",
   },
   {
     currency_id: 2,

@@ -45,7 +45,7 @@ const CATEGORY_COLORS = [
   "#475569",
 ];
 
-const fmtMoney = (value: number) => formatMoney(value, "CRC", "₡");
+const fmtMoney = (value: number) => formatMoney(value, "VES", "Bs.");
 const fmtUnits = (value: number) =>
   `${Number(value ?? 0).toLocaleString("es-CR")} u`;
 

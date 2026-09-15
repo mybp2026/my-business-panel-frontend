@@ -60,15 +60,15 @@ export function ProductDetailModal({
             {field(
               "Costo unitario",
               pv.cost_price != null
-                ? `₡${Number(pv.cost_price).toLocaleString("es-CR")}`
+                ? `Bs. ${Number(pv.cost_price).toLocaleString("es-VE")}`
                 : null,
             )}
             {field(
               "Precio de venta",
               pv.unit_price != null
-                ? `₡${Number(pv.unit_price).toLocaleString("es-CR")}`
+                ? `Bs. ${Number(pv.unit_price).toLocaleString("es-VE")}`
                 : pv.price != null
-                  ? `₡${Number(pv.price).toLocaleString("es-CR")}`
+                  ? `Bs. ${Number(pv.price).toLocaleString("es-VE")}`
                   : null,
             )}
             {field(
@@ -78,7 +78,6 @@ export function ProductDetailModal({
                 : "No incluido (se aplica al vender)",
             )}
 
-            {field("Código CABYS", pv.cabys_code)}
             {field("Estado", pv.is_active)}
             {field("ID", pv.product_variant_id || pv.product_id)}
           </div>
@@ -110,7 +109,7 @@ export function ProductDetailModal({
                 field(
                   "Monto mínimo para regalo",
                   pv.giftable_from != null
-                    ? `₡${Number(pv.giftable_from).toLocaleString("es-CR")}`
+                    ? `Bs. ${Number(pv.giftable_from).toLocaleString("es-VE")}`
                     : "Sin mínimo",
                 )}
             </div>

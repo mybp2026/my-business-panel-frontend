@@ -35,17 +35,12 @@ export function RefundsHistoryTable({
       ),
     },
     {
-      key: "digital_sale_invoice_id",
+      key: "invoice_id",
       label: "Factura",
       width: "14%",
-      render: (_: unknown, row: ReturnTransaction) => {
-        const isElectronic = Boolean(row.electronic_sale_invoice_id);
-        return (
-          <Badge variant={isElectronic ? "blue" : "gray"}>
-            {isElectronic ? "Electrónica" : "Digital"}
-          </Badge>
-        );
-      },
+      render: (v: string) => (
+        <span className="font-mono text-xs text-gray-600 break-all">{v}</span>
+      ),
     },
     {
       key: "total_refund_amount",

@@ -25,7 +25,7 @@ export function PosExpensePage() {
   const { user } = useAuth();
   const canManageCategories = (user?.role.role_id ?? 4) < 4;
   const crcCurrency =
-    currencies.find((c) => c.currency_code === "CRC") ?? currencies[0];
+    currencies.find((c) => c.currency_code === "VES") ?? currencies[0];
 
   const [categories, setCategories] =
     useState<ExpenseCategory[]>(initialCategories);
@@ -200,7 +200,7 @@ export function PosExpensePage() {
                 placeholder="Detalle del gasto"
               />
               <Input
-                label={`Monto (${crcCurrency?.symbol ?? "₡"})`}
+                label={`Monto (${crcCurrency?.symbol ?? "Bs."})`}
                 type="number"
                 min={0.01}
                 step="0.01"

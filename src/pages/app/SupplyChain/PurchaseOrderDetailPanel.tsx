@@ -617,13 +617,13 @@ export function PurchaseOrderDetailPanel({
                             }{" "}
                             ={" "}
                             <span className="font-semibold">
-                              {convertedAmount.toLocaleString("es-CR", {
+                              {convertedAmount.toLocaleString("es-VE", {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,
                               })}{" "}
                               {quickPaymentForm.currency_id === CRC_CURRENCY_ID
                                 ? "$"
-                                : "₡"}
+                                : "Bs."}
                             </span>
                           </p>
                         </div>
