@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 
+import { journeyApi } from "@/api";
+
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
@@ -9,11 +11,18 @@ import { Select } from "@/components/ui/Select";
 import type {
   HrDutiesType,
   HrEmployeeRecord,
+  HrJourneyClassification,
   HrTurn,
 } from "@/interfaces/entities/Hr.interface";
 import type { UpdateContractPayload } from "@/interfaces/entities/Employee.interface";
 
 import { contractSchema } from "@/pages/app/UsersPage/newUser.schema";
+
+const JOURNEY_LABEL: Record<HrJourneyClassification["effectiveJourney"], string> = {
+  diurna: "Diurna",
+  nocturna: "Nocturna",
+  mixta: "Mixta",
+};
 
 type ContractFields = z.infer<typeof contractSchema>;
 type ContractErrors = Partial<Record<keyof ContractFields, string>>;
@@ -65,6 +74,8 @@ export function ContractEditorModal({
   );
   const [errors, setErrors] = useState<ContractErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [turnClassification, setTurnClassification] =
+    useState<HrJourneyClassification | null>(null);
 
   useEffect(() => {
     if (!isOpen || !employee) {
@@ -92,6 +103,38 @@ export function ContractEditorModal({
     () => turns.filter((turn) => turn.branch_id === employee?.branch_id),
     [employee?.branch_id, turns],
   );
+
+  // Las horas por turno NO se escriben a mano (Art. 173 LOTTT): se
+  // derivan del entry/out del turno elegido, igual que en el backend.
+  useEffect(() => {
+    const selectedTurn = branchTurns.find(
+      (turn) => String(turn.turn_id) === contractData.turn_id,
+    );
+
+    if (!selectedTurn) {
+      setTurnClassification(null);
+      return;
+    }
+
+    let cancelled = false;
+    journeyApi
+      .classify(selectedTurn.entry.slice(0, 5), selectedTurn.out.slice(0, 5))
+      .then((result) => {
+        if (cancelled) return;
+        setTurnClassification(result);
+        setContractData((prev) => ({
+          ...prev,
+          turn_type: result.totalHours.toFixed(2),
+        }));
+      })
+      .catch(() => {
+        if (!cancelled) setTurnClassification(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [branchTurns, contractData.turn_id]);
 
   const handleSubmit = async () => {
     if (!employee) return;
@@ -199,17 +242,21 @@ export function ContractEditorModal({
             />
             <Input
               label="Horas por turno"
-              type="number"
-              min="1"
-              value={contractData.turn_type}
-              onChange={(event) =>
-                setContractData((prev) => ({
-                  ...prev,
-                  turn_type: event.target.value,
-                }))
+              type="text"
+              value={
+                turnClassification
+                  ? `${turnClassification.totalHours.toFixed(2)} h`
+                  : contractData.turn_id
+                    ? "Calculando..."
+                    : "Seleccione un turno"
+              }
+              disabled
+              hint={
+                turnClassification
+                  ? `Jornada ${JOURNEY_LABEL[turnClassification.effectiveJourney]} segun el turno (Art. 173 LOTTT)`
+                  : "Se calcula automaticamente a partir del turno elegido"
               }
               error={errors.turn_type}
-              required
             />
             <Select
               label="Turno"
