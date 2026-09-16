@@ -48,6 +48,16 @@ export interface HrTurn {
   out: string;
 }
 
+/** Resultado de clasificar un rango horario segun el Art. 173 LOTTT. */
+export interface HrJourneyClassification {
+  totalHours: number;
+  diurnalHours: number;
+  nocturnalHours: number;
+  effectiveJourney: "diurna" | "nocturna" | "mixta";
+  maxDaily: number;
+  reason?: string;
+}
+
 export interface HrClockingRecord {
   clocking_id: number;
   employee_id: string;

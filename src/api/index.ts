@@ -34,6 +34,7 @@ export { contractApi } from "./contract.api";
 export { conceptApi } from "./concept.api";
 export { clockingApi } from "./clocking.api";
 export { turnsApi } from "./turns.api";
+export { journeyApi } from "./journey.api";
 export { paysheetApi } from "./paysheet.api";
 export { payrollApi } from "./payroll.api";
 export { payrollMovementApi } from "./payrollMovement.api";

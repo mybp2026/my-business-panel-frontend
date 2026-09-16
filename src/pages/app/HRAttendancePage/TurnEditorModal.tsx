@@ -1,10 +1,21 @@
 import { useEffect, useState } from "react";
 
+import { journeyApi } from "@/api";
+
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 
-import type { HrTurn } from "@/interfaces/entities/Hr.interface";
+import type {
+  HrJourneyClassification,
+  HrTurn,
+} from "@/interfaces/entities/Hr.interface";
+
+const JOURNEY_LABEL: Record<HrJourneyClassification["effectiveJourney"], string> = {
+  diurna: "Diurna",
+  nocturna: "Nocturna",
+  mixta: "Mixta",
+};
 
 interface TurnEditorModalProps {
   isOpen: boolean;
@@ -25,6 +36,9 @@ export function TurnEditorModal({
   const [out, setOut] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [classification, setClassification] =
+    useState<HrJourneyClassification | null>(null);
+  const [isClassifying, setIsClassifying] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -32,12 +46,42 @@ export function TurnEditorModal({
       setOut("");
       setError("");
       setIsSubmitting(false);
+      setClassification(null);
       return;
     }
 
     setEntry(turn?.entry?.slice(0, 5) ?? "");
     setOut(turn?.out?.slice(0, 5) ?? "");
   }, [isOpen, turn]);
+
+  useEffect(() => {
+    if (!isOpen || !entry || !out) {
+      setClassification(null);
+      return;
+    }
+
+    let cancelled = false;
+    setIsClassifying(true);
+
+    const timeout = setTimeout(() => {
+      journeyApi
+        .classify(entry, out)
+        .then((result) => {
+          if (!cancelled) setClassification(result);
+        })
+        .catch(() => {
+          if (!cancelled) setClassification(null);
+        })
+        .finally(() => {
+          if (!cancelled) setIsClassifying(false);
+        });
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [isOpen, entry, out]);
 
   const handleSubmit = async () => {
     setError("");
@@ -83,6 +127,25 @@ export function TurnEditorModal({
           onChange={(event) => setOut(event.target.value)}
           required
         />
+
+        {entry && out && (
+          <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm">
+            {isClassifying && !classification && (
+              <span className="text-gray-500">Calculando jornada...</span>
+            )}
+            {classification && (
+              <p className="text-gray-700">
+                Jornada{" "}
+                <span className="font-semibold text-gray-900">
+                  {JOURNEY_LABEL[classification.effectiveJourney]}
+                </span>{" "}
+                · {classification.totalHours.toFixed(2)} horas (maximo{" "}
+                {classification.maxDaily}h, Art. 173 LOTTT)
+                {classification.reason ? ` · ${classification.reason}` : ""}
+              </p>
+            )}
+          </div>
+        )}
 
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
