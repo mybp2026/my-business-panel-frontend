@@ -94,7 +94,7 @@ export function HROvertimePage() {
     try {
       const [recordsResult, accResult] = await Promise.all([
         overtimeApi.listByEmployee(empId, from, to),
-        overtimeApi.accumulated(empId, todayIso()),
+        overtimeApi.accumulated(empId, form.work_date),
       ]);
       setRecords(recordsResult);
       setAccumulated(accResult);
@@ -115,7 +115,7 @@ export function HROvertimePage() {
       setAccumulated(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employeeId, from, to]);
+  }, [employeeId, from, to, form.work_date]);
 
   const handleCreate = async () => {
     if (!employeeId || !selectedEmployee) return;
@@ -234,18 +234,21 @@ export function HROvertimePage() {
           {accumulated && (
             <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-3">
               <StatCard
-                label="Horas extra hoy"
+                label="Horas extra del día"
                 value={`${accumulated.daily.used} / ${accumulated.daily.max} h`}
+                sublabel={form.work_date}
                 icon={<IconCalendar />}
               />
               <StatCard
                 label="Horas extra semana"
                 value={`${accumulated.weekly.used} / ${accumulated.weekly.max} h`}
+                sublabel={`Semana de ${form.work_date}`}
                 icon={<IconCalendar />}
               />
               <StatCard
                 label="Horas extra año"
                 value={`${accumulated.yearly.used} / ${accumulated.yearly.max} h`}
+                sublabel={form.work_date.slice(0, 4)}
                 icon={<IconCalendar />}
               />
             </div>
@@ -263,6 +266,7 @@ export function HROvertimePage() {
                 onChange={(e) =>
                   setForm((p) => ({ ...p, work_date: e.target.value }))
                 }
+                required
               />
               <Select
                 label="Tipo"
@@ -283,6 +287,7 @@ export function HROvertimePage() {
                 onChange={(e) =>
                   setForm((p) => ({ ...p, hours: e.target.value }))
                 }
+                required
               />
               {form.kind === "extra" && (
                 <Select
