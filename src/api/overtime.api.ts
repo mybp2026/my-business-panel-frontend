@@ -60,7 +60,12 @@ export const overtimeApi = {
       await buildError(response, "Error al calcular el acumulado de horas");
     }
     const json: ApiResponse<{
-      daily: { used: number; max: number };
+      daily: {
+        used: number;
+        max: number;
+        ordinaryHours: number;
+        extraHours: number;
+      };
       weekly: { used: number; max: number };
       yearly: { used: number; max: number };
     }> = await response.json();

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-import { authApi, employeeApi, hrSettlementApi } from "@/api";
+import { employeeApi, hrSettlementApi } from "@/api";
 
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -9,16 +9,17 @@ import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
 import { Table } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
+import { useHrEmployee } from "@/context/HrEmployeeContext";
 
 import { IconCreditCard } from "@/assets/icons";
 
 import type { Column } from "@/interfaces/components/ui/TableProps.interface";
 import type { ToastMode } from "@/interfaces/components/ui/ToastProps.interface";
 import type {
-  HrEmployeeRecord,
   HrSettlement,
   HrSettlementItem,
   HrSettlementPreview,
+  HrTerminationType,
 } from "@/interfaces/entities/Hr.interface";
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -31,7 +32,10 @@ const formatAmount = (value: number | string | null | undefined) =>
         maximumFractionDigits: 2,
       });
 
-const STATUS_VARIANT: Record<HrSettlement["status"], "gray" | "yellow" | "green" | "red"> = {
+const STATUS_VARIANT: Record<
+  HrSettlement["status"],
+  "gray" | "yellow" | "green" | "red"
+> = {
   borrador: "gray",
   calculada: "yellow",
   pagada: "green",
@@ -45,10 +49,38 @@ const STATUS_LABEL: Record<HrSettlement["status"], string> = {
   anulada: "Anulada",
 };
 
-export function HRSettlementPage() {
-  const [employees, setEmployees] = useState<HrEmployeeRecord[]>([]);
-  const [employeeId, setEmployeeId] = useState("");
+/**
+ * La causal decide si aplica la indemnizacion del Art. 92 (la duplica
+ * la prestacion) y, en fallecimiento, si se abre el reparto entre
+ * herederos del Art. 145.
+ */
+const TERMINATION_OPTIONS: { value: HrTerminationType; label: string }[] = [
+  {
+    value: "despido_injustificado",
+    label: "Despido injustificado (indemniza, Art. 92)",
+  },
+  {
+    value: "causa_ajena_al_trabajador",
+    label: "Causa ajena al trabajador (indemniza, Art. 92)",
+  },
+  { value: "renuncia", label: "Renuncia" },
+  { value: "despido_justificado", label: "Despido justificado" },
+  { value: "vencimiento_contrato", label: "Vencimiento de contrato" },
+  { value: "fallecimiento", label: "Fallecimiento (reparto Art. 145)" },
+];
+
+const INDEMNIFIES: HrTerminationType[] = [
+  "despido_injustificado",
+  "causa_ajena_al_trabajador",
+];
+
+export function SettlementSection() {
+  const { employeeId, employees } = useHrEmployee();
+
   const [terminationDate, setTerminationDate] = useState(todayIso());
+  const [terminationType, setTerminationType] =
+    useState<HrTerminationType>("renuncia");
+  const [terminationReason, setTerminationReason] = useState("");
   const [preview, setPreview] = useState<HrSettlementPreview | null>(null);
   const [settlement, setSettlement] = useState<HrSettlement | null>(null);
   const [overdue, setOverdue] = useState<HrSettlement[]>([]);
@@ -57,35 +89,55 @@ export function HRSettlementPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ mode: ToastMode; message: string } | null>(
-    null,
-  );
+  const [toast, setToast] = useState<{
+    mode: ToastMode;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
-    (async () => {
-      const currentUser = await authApi.getCurrentUser();
-      const tenantId = currentUser?.tenant?.tenant_id ?? "";
-      if (tenantId) setEmployees(await employeeApi.listByTenant(tenantId));
-      try {
-        setOverdue(await hrSettlementApi.overdue());
-      } catch {
-        // no bloquea la pantalla si el listado de vencidas falla
-      }
-    })();
+    hrSettlementApi
+      .overdue()
+      .then(setOverdue)
+      .catch(() => {
+        // el listado de vencidas no debe bloquear la pantalla
+      });
   }, []);
 
-  const employeeOptions = useMemo(
-    () =>
-      employees.map((e) => ({
-        value: e.employee_id,
-        label: `${e.first_name} ${e.last_name}`,
-      })),
-    [employees],
-  );
+  useEffect(() => {
+    setPreview(null);
+    setSettlement(null);
+  }, [employeeId]);
 
   const employeeName = (id: string) => {
     const emp = employees.find((e) => e.employee_id === id);
     return emp ? `${emp.first_name} ${emp.last_name}` : id;
+  };
+
+  const handleRegisterTermination = async () => {
+    if (!employeeId) return;
+    setIsSubmitting(true);
+    try {
+      await employeeApi.terminate(employeeId, {
+        termination_date: terminationDate,
+        termination_type: terminationType,
+        termination_reason: terminationReason || undefined,
+      });
+      setToast({
+        mode: "success",
+        message: "Egreso registrado. Ya puedes calcular la liquidación.",
+      });
+      await handlePreview();
+    } catch (error) {
+      setToast({
+        mode: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Error registrando el egreso",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handlePreview = async () => {
@@ -93,16 +145,15 @@ export function HRSettlementPage() {
     setIsLoading(true);
     setSettlement(null);
     try {
-      const result = await hrSettlementApi.preview(
-        employeeId,
-        terminationDate,
-      );
+      const result = await hrSettlementApi.preview(employeeId, terminationDate);
       setPreview(result);
     } catch (error) {
       setToast({
         mode: "error",
         message:
-          error instanceof Error ? error.message : "Error calculando el preview",
+          error instanceof Error
+            ? error.message
+            : "Error calculando el preview",
       });
     } finally {
       setIsLoading(false);
@@ -118,12 +169,17 @@ export function HRSettlementPage() {
         termination_date: terminationDate,
       });
       setSettlement(created);
-      setToast({ mode: "success", message: "Liquidación creada correctamente" });
+      setToast({
+        mode: "success",
+        message: "Liquidación creada correctamente",
+      });
     } catch (error) {
       setToast({
         mode: "error",
         message:
-          error instanceof Error ? error.message : "Error creando la liquidación",
+          error instanceof Error
+            ? error.message
+            : "Error creando la liquidación",
       });
     } finally {
       setIsSubmitting(false);
@@ -138,12 +194,17 @@ export function HRSettlementPage() {
         payment_date: paymentDate,
       });
       setSettlement(paid);
-      setToast({ mode: "success", message: "Liquidación pagada correctamente" });
+      setToast({
+        mode: "success",
+        message: "Liquidación pagada correctamente",
+      });
     } catch (error) {
       setToast({
         mode: "error",
         message:
-          error instanceof Error ? error.message : "Error pagando la liquidación",
+          error instanceof Error
+            ? error.message
+            : "Error pagando la liquidación",
       });
     } finally {
       setIsSubmitting(false);
@@ -166,7 +227,9 @@ export function HRSettlementPage() {
       setToast({
         mode: "error",
         message:
-          error instanceof Error ? error.message : "Error anulando la liquidación",
+          error instanceof Error
+            ? error.message
+            : "Error anulando la liquidación",
       });
     } finally {
       setIsSubmitting(false);
@@ -222,7 +285,7 @@ export function HRSettlementPage() {
   ];
 
   return (
-    <div className="p-6 lg:p-8">
+    <>
       {toast && (
         <Toast
           mode={toast.mode}
@@ -230,17 +293,6 @@ export function HRSettlementPage() {
           onClose={() => setToast(null)}
         />
       )}
-
-      <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold text-gray-900">
-          Liquidación final
-        </h1>
-        <p className="text-gray-600">
-          Prestaciones (Art. 142, MAX entre garantía y retroactivo),
-          vacaciones y utilidades fraccionadas, indemnización (Art. 92) y
-          mora (Art. 142.f), en un único desglose auditable.
-        </p>
-      </div>
 
       {overdue.length > 0 && (
         <div className="mb-6 rounded-2xl border border-gray-300 bg-white p-6">
@@ -256,31 +308,54 @@ export function HRSettlementPage() {
       )}
 
       <div className="mb-6 rounded-2xl border border-gray-300 bg-white p-6">
-        <div className="flex flex-wrap items-end gap-4">
-          <Select
-            label="Empleado"
-            value={employeeId}
-            onChange={(e) => {
-              setEmployeeId(e.target.value);
-              setPreview(null);
-              setSettlement(null);
-            }}
-            options={employeeOptions}
-            placeholder="Selecciona un empleado"
-          />
+        <h2 className="mb-1 text-base font-semibold text-gray-900">
+          Registrar egreso
+        </h2>
+        <p className="mb-4 text-sm text-gray-500">
+          La causal es obligatoria: decide si corresponde la indemnización del
+          Art. 92 y, en caso de fallecimiento, el reparto entre herederos del
+          Art. 145.
+        </p>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Input
             label="Fecha de egreso"
             type="date"
             value={terminationDate}
             onChange={(e) => setTerminationDate(e.target.value)}
+            required
           />
+          <Select
+            label="Causal de egreso"
+            value={terminationType}
+            onChange={(e) =>
+              setTerminationType(e.target.value as HrTerminationType)
+            }
+            options={TERMINATION_OPTIONS}
+            required
+          />
+          <Input
+            label="Motivo"
+            placeholder="Ej: Reducción de personal"
+            value={terminationReason}
+            onChange={(e) => setTerminationReason(e.target.value)}
+          />
+        </div>
+        {INDEMNIFIES.includes(terminationType) && (
+          <p className="mt-3 text-sm text-gray-600">
+            Con esta causal la indemnización del Art. 92 iguala el monto de las
+            prestaciones: el total se duplica.
+          </p>
+        )}
+        <div className="mt-4 flex flex-wrap justify-end gap-3">
           <Button
             variant="secondary"
             onClick={handlePreview}
             loading={isLoading}
-            disabled={!employeeId}
           >
             Ver preview
+          </Button>
+          <Button onClick={handleRegisterTermination} loading={isSubmitting}>
+            Registrar egreso
           </Button>
         </div>
       </div>
@@ -303,7 +378,9 @@ export function HRSettlementPage() {
             />
             <StatCard
               label="Mora (142.f)"
-              value={formatAmount(settlement?.mora_amount ?? preview?.moraAmount)}
+              value={formatAmount(
+                settlement?.mora_amount ?? preview?.moraAmount,
+              )}
               sublabel={`${settlement?.mora_days ?? preview?.moraDays ?? 0} días`}
               icon={<IconCreditCard />}
             />
@@ -316,6 +393,14 @@ export function HRSettlementPage() {
           </div>
 
           <div className="mb-6 rounded-2xl border border-gray-300 bg-white p-6">
+            <h2 className="mb-1 text-base font-semibold text-gray-900">
+              Desglose auditable (Art. 106)
+            </h2>
+            <p className="mb-4 text-sm text-gray-500">
+              Vacaciones y bono vacacional aparecen por separado: los años ya
+              cumplidos como causados (Arts. 195, 192) y los meses del año en
+              curso como fracción (Art. 196).
+            </p>
             <Table
               columns={itemColumns}
               data={items as HrSettlementItem[]}
@@ -351,7 +436,7 @@ export function HRSettlementPage() {
                   Pagar
                 </Button>
                 <Input
-                  label="Motivo de anulación (opcional)"
+                  label="Motivo de anulación"
                   value={voidReason}
                   onChange={(e) => setVoidReason(e.target.value)}
                 />
@@ -365,14 +450,8 @@ export function HRSettlementPage() {
               </div>
             </div>
           )}
-
-          {settlement && settlement.status === "pagada" && (
-            <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-              Pagada el {settlement.payment_date?.slice(0, 10)}.
-            </div>
-          )}
         </>
       )}
-    </div>
+    </>
   );
 }

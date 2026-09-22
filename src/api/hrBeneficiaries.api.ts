@@ -4,6 +4,8 @@ import type { ApiResponse } from "@/interfaces/api/ApiResponse.interface";
 import type {
   CreateBeneficiaryPayload,
   DistributeSettlementPayload,
+  HrClaimWindow,
+  HrDistributionResult,
   HrEmployeeBeneficiary,
 } from "@/interfaces/entities/Hr.interface";
 
@@ -50,7 +52,7 @@ export const hrBeneficiariesApi = {
     return json.data;
   },
 
-  async claimWindow(employeeId: string) {
+  async claimWindow(employeeId: string): Promise<HrClaimWindow> {
     const response = await fetch(
       `${url}/beneficiaries/${employeeId}/claim-window`,
       {
@@ -62,18 +64,14 @@ export const hrBeneficiariesApi = {
     if (!response.ok) {
       await buildError(response, "Error al calcular la ventana de reclamo");
     }
-    const json: ApiResponse<{
-      opensAt: string;
-      closesAt: string;
-      article: string;
-    }> = await response.json();
+    const json: ApiResponse<HrClaimWindow> = await response.json();
     return json.data;
   },
 
   async distribute(
     employeeId: string,
     data: DistributeSettlementPayload,
-  ): Promise<HrEmployeeBeneficiary[]> {
+  ): Promise<HrDistributionResult> {
     const response = await fetch(
       `${url}/beneficiaries/${employeeId}/distribute`,
       {
@@ -86,12 +84,18 @@ export const hrBeneficiariesApi = {
     if (!response.ok) {
       await buildError(response, "Error al distribuir la liquidación");
     }
-    const json: ApiResponse<HrEmployeeBeneficiary[]> = await response.json();
-    return json.data ?? [];
+    const json: ApiResponse<HrDistributionResult> = await response.json();
+    return json.data;
   },
 
-  async list(employeeId: string): Promise<HrEmployeeBeneficiary[]> {
-    const response = await fetch(`${url}/beneficiaries/${employeeId}`, {
+  /** `onlyValidated` se resuelve en la query del backend, no en memoria. */
+  async list(
+    employeeId: string,
+    onlyValidated?: boolean,
+  ): Promise<HrEmployeeBeneficiary[]> {
+    const query =
+      onlyValidated === undefined ? "" : `?onlyValidated=${onlyValidated}`;
+    const response = await fetch(`${url}/beneficiaries/${employeeId}${query}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       credentials: "include",

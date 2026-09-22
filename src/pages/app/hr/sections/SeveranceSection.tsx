@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-import { authApi, employeeApi, hrSeveranceApi } from "@/api";
+import { hrSeveranceApi } from "@/api";
 
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -9,13 +9,13 @@ import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
 import { Table } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
+import { useHrEmployee } from "@/context/HrEmployeeContext";
 
 import { IconCreditCard } from "@/assets/icons";
 
 import type { Column } from "@/interfaces/components/ui/TableProps.interface";
 import type { ToastMode } from "@/interfaces/components/ui/ToastProps.interface";
 import type {
-  HrEmployeeRecord,
   HrSeveranceAdvance,
   HrSeveranceBalance,
   HrSeveranceDeposit,
@@ -54,16 +54,14 @@ const ADVANCE_STATUS_VARIANT: Record<
   rechazado: "red",
 };
 
-export function HRSeverancePage() {
-  const [employees, setEmployees] = useState<HrEmployeeRecord[]>([]);
-  const [employeeId, setEmployeeId] = useState("");
+export function SeveranceSection() {
+  const { employeeId } = useHrEmployee();
+
   const [balance, setBalance] = useState<HrSeveranceBalance | null>(null);
   const [deposits, setDeposits] = useState<HrSeveranceDeposit[]>([]);
   const [interest, setInterest] = useState<HrSeveranceInterest[]>([]);
   const [advances, setAdvances] = useState<HrSeveranceAdvance[]>([]);
-  const [availableAdvance, setAvailableAdvance] = useState<string | null>(
-    null,
-  );
+  const [availableAdvance, setAvailableAdvance] = useState<string | null>(null);
 
   const [depositUntil, setDepositUntil] = useState(todayIso());
   const [depositLocation, setDepositLocation] = useState("fideicomiso");
@@ -77,42 +75,30 @@ export function HRSeverancePage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ mode: ToastMode; message: string } | null>(
-    null,
-  );
-
-  useEffect(() => {
-    (async () => {
-      const currentUser = await authApi.getCurrentUser();
-      const tenantId = currentUser?.tenant?.tenant_id ?? "";
-      if (!tenantId) return;
-      setEmployees(await employeeApi.listByTenant(tenantId));
-    })();
-  }, []);
-
-  const employeeOptions = useMemo(
-    () =>
-      employees.map((e) => ({
-        value: e.employee_id,
-        label: `${e.first_name} ${e.last_name}`,
-      })),
-    [employees],
-  );
+  const [toast, setToast] = useState<{
+    mode: ToastMode;
+    message: string;
+  } | null>(null);
 
   const reload = async (empId: string) => {
     if (!empId) return;
     setIsLoading(true);
     try {
-      const [balanceResult, depositsResult, interestResult, advancesResult, availableResult] =
-        await Promise.all([
-          hrSeveranceApi.balance(empId),
-          hrSeveranceApi.listDeposits(empId),
-          hrSeveranceApi.listInterest(empId),
-          hrSeveranceApi.listAdvances(empId),
-          hrSeveranceApi.availableAdvance(empId) as Promise<{
-            available: string;
-          }>,
-        ]);
+      const [
+        balanceResult,
+        depositsResult,
+        interestResult,
+        advancesResult,
+        availableResult,
+      ] = await Promise.all([
+        hrSeveranceApi.balance(empId),
+        hrSeveranceApi.listDeposits(empId),
+        hrSeveranceApi.listInterest(empId),
+        hrSeveranceApi.listAdvances(empId),
+        hrSeveranceApi.availableAdvance(empId) as Promise<{
+          available: string;
+        }>,
+      ]);
       setBalance(balanceResult);
       setDeposits(depositsResult);
       setInterest(interestResult);
@@ -139,6 +125,7 @@ export function HRSeverancePage() {
       setAdvances([]);
       setAvailableAdvance(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employeeId]);
 
   const handleGenerateDeposits = async () => {
@@ -148,14 +135,21 @@ export function HRSeverancePage() {
       await hrSeveranceApi.generateDeposits({
         employee_id: employeeId,
         until: depositUntil,
-        location: depositLocation as "fideicomiso" | "fondo_nacional" | "contabilidad",
+        location: depositLocation as
+          | "fideicomiso"
+          | "fondo_nacional"
+          | "contabilidad",
       });
       await reload(employeeId);
-      setToast({ mode: "success", message: "Trimestres generados correctamente" });
+      setToast({
+        mode: "success",
+        message: "Trimestres generados correctamente",
+      });
     } catch (error) {
       setToast({
         mode: "error",
-        message: error instanceof Error ? error.message : "Error generando depósitos",
+        message:
+          error instanceof Error ? error.message : "Error generando depósitos",
       });
     } finally {
       setIsSubmitting(false);
@@ -192,11 +186,15 @@ export function HRSeverancePage() {
         to: interestTo,
       });
       await reload(employeeId);
-      setToast({ mode: "success", message: "Intereses generados correctamente" });
+      setToast({
+        mode: "success",
+        message: "Intereses generados correctamente",
+      });
     } catch (error) {
       setToast({
         mode: "error",
-        message: error instanceof Error ? error.message : "Error generando intereses",
+        message:
+          error instanceof Error ? error.message : "Error generando intereses",
       });
     } finally {
       setIsSubmitting(false);
@@ -207,7 +205,10 @@ export function HRSeverancePage() {
     if (!employeeId) return;
     const amount = parseFloat(advanceForm.requested_amount);
     if (!amount || amount <= 0) {
-      setToast({ mode: "error", message: "Ingresa un monto de anticipo válido" });
+      setToast({
+        mode: "error",
+        message: "Ingresa un monto de anticipo válido",
+      });
       return;
     }
     setIsSubmitting(true);
@@ -215,16 +216,28 @@ export function HRSeverancePage() {
       await hrSeveranceApi.createAdvance({
         employee_id: employeeId,
         requested_amount: amount,
-        reason: advanceForm.reason as "vivienda" | "hipoteca" | "educacion" | "salud",
+        reason: advanceForm.reason as
+          | "vivienda"
+          | "hipoteca"
+          | "educacion"
+          | "salud",
         reason_detail: advanceForm.reason_detail || undefined,
       });
-      setAdvanceForm({ requested_amount: "", reason: "vivienda", reason_detail: "" });
+      setAdvanceForm({
+        requested_amount: "",
+        reason: "vivienda",
+        reason_detail: "",
+      });
       await reload(employeeId);
-      setToast({ mode: "success", message: "Anticipo solicitado correctamente" });
+      setToast({
+        mode: "success",
+        message: "Anticipo solicitado correctamente",
+      });
     } catch (error) {
       setToast({
         mode: "error",
-        message: error instanceof Error ? error.message : "Error solicitando anticipo",
+        message:
+          error instanceof Error ? error.message : "Error solicitando anticipo",
       });
     } finally {
       setIsSubmitting(false);
@@ -243,7 +256,8 @@ export function HRSeverancePage() {
     } catch (error) {
       setToast({
         mode: "error",
-        message: error instanceof Error ? error.message : "Error aprobando anticipo",
+        message:
+          error instanceof Error ? error.message : "Error aprobando anticipo",
       });
     } finally {
       setIsSubmitting(false);
@@ -261,7 +275,8 @@ export function HRSeverancePage() {
     } catch (error) {
       setToast({
         mode: "error",
-        message: error instanceof Error ? error.message : "Error rechazando anticipo",
+        message:
+          error instanceof Error ? error.message : "Error rechazando anticipo",
       });
     } finally {
       setIsSubmitting(false);
@@ -401,7 +416,10 @@ export function HRSeverancePage() {
               size="sm"
               variant="secondary"
               onClick={() =>
-                handleApproveAdvance(row.advance_id, Number(row.requested_amount))
+                handleApproveAdvance(
+                  row.advance_id,
+                  Number(row.requested_amount),
+                )
               }
               loading={isSubmitting}
             >
@@ -421,7 +439,7 @@ export function HRSeverancePage() {
   ];
 
   return (
-    <div className="p-6 lg:p-8">
+    <>
       {toast && (
         <Toast
           mode={toast.mode}
@@ -430,169 +448,145 @@ export function HRSeverancePage() {
         />
       )}
 
-      <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold text-gray-900">
-          Prestaciones sociales
-        </h1>
-        <p className="text-gray-600">
-          Garantía trimestral, intereses y anticipos sobre la garantía de
-          prestaciones (Arts. 142, 143, 144).
-        </p>
-      </div>
-
-      <div className="mb-6 rounded-2xl border border-gray-300 bg-white p-6">
-        <Select
-          label="Empleado"
-          value={employeeId}
-          onChange={(e) => setEmployeeId(e.target.value)}
-          options={employeeOptions}
-          placeholder="Selecciona un empleado"
-        />
-      </div>
-
-      {employeeId && (
-        <>
-          {balance && (
-            <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-4">
-              <StatCard
-                label="Depositado"
-                value={formatAmount(balance.depositedAmount)}
-                icon={<IconCreditCard />}
-              />
-              <StatCard
-                label="Intereses capitalizados"
-                value={formatAmount(balance.capitalizedInterest)}
-                icon={<IconCreditCard />}
-              />
-              <StatCard
-                label="Anticipos aprobados"
-                value={formatAmount(balance.advancesApproved)}
-                icon={<IconCreditCard />}
-              />
-              <StatCard
-                label="Saldo de garantía"
-                value={formatAmount(balance.balance)}
-                icon={<IconCreditCard />}
-                accent
-              />
-            </div>
-          )}
-
-          <section className="mb-6 rounded-2xl border border-gray-300 bg-white p-6">
-            <h2 className="mb-4 text-base font-semibold text-gray-900">
-              Garantía trimestral (Art. 142.a)
-            </h2>
-            <div className="mb-4 flex flex-wrap items-end gap-4">
-              <Input
-                label="Generar hasta"
-                type="date"
-                value={depositUntil}
-                onChange={(e) => setDepositUntil(e.target.value)}
-              />
-              <Select
-                label="Ubicación de la garantía"
-                value={depositLocation}
-                onChange={(e) => setDepositLocation(e.target.value)}
-                options={LOCATION_OPTIONS}
-              />
-              <Button
-                variant="secondary"
-                onClick={handleGenerateDeposits}
-                loading={isSubmitting}
-              >
-                Generar trimestres
-              </Button>
-            </div>
-            <Table
-              columns={depositColumns}
-              data={deposits}
-              isLoading={isLoading}
-              emptyMessage="No hay depósitos generados."
-            />
-          </section>
-
-          <section className="mb-6 rounded-2xl border border-gray-300 bg-white p-6">
-            <h2 className="mb-4 text-base font-semibold text-gray-900">
-              Intereses sobre la garantía (Art. 143)
-            </h2>
-            <div className="mb-4 flex flex-wrap items-end gap-4">
-              <Input
-                label="Desde"
-                type="date"
-                value={interestFrom}
-                onChange={(e) => setInterestFrom(e.target.value)}
-              />
-              <Input
-                label="Hasta"
-                type="date"
-                value={interestTo}
-                onChange={(e) => setInterestTo(e.target.value)}
-              />
-              <Button
-                variant="secondary"
-                onClick={handleGenerateInterest}
-                loading={isSubmitting}
-              >
-                Generar intereses
-              </Button>
-            </div>
-            <Table
-              columns={interestColumns}
-              data={interest}
-              isLoading={isLoading}
-              emptyMessage="No hay intereses generados."
-            />
-          </section>
-
-          <section className="rounded-2xl border border-gray-300 bg-white p-6">
-            <h2 className="mb-4 text-base font-semibold text-gray-900">
-              Anticipos sobre la garantía (Art. 144)
-              {availableAdvance && (
-                <span className="ml-2 font-normal text-gray-400">
-                  Disponible: {formatAmount(availableAdvance)}
-                </span>
-              )}
-            </h2>
-            <div className="mb-4 grid max-w-2xl grid-cols-1 gap-4 md:grid-cols-3">
-              <Input
-                label="Monto solicitado"
-                type="number"
-                step="0.01"
-                value={advanceForm.requested_amount}
-                onChange={(e) =>
-                  setAdvanceForm((p) => ({
-                    ...p,
-                    requested_amount: e.target.value,
-                  }))
-                }
-              />
-              <Select
-                label="Motivo"
-                value={advanceForm.reason}
-                onChange={(e) =>
-                  setAdvanceForm((p) => ({ ...p, reason: e.target.value }))
-                }
-                options={REASON_OPTIONS}
-              />
-              <div className="flex items-end">
-                <Button
-                  variant="secondary"
-                  onClick={handleCreateAdvance}
-                  loading={isSubmitting}
-                >
-                  Solicitar anticipo
-                </Button>
-              </div>
-            </div>
-            <Table
-              columns={advanceColumns}
-              data={advances}
-              isLoading={isLoading}
-              emptyMessage="No hay anticipos registrados."
-            />
-          </section>
-        </>
+      {balance && (
+        <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-4">
+          <StatCard
+            label="Depositado"
+            value={formatAmount(balance.depositedAmount)}
+            icon={<IconCreditCard />}
+          />
+          <StatCard
+            label="Intereses capitalizados"
+            value={formatAmount(balance.capitalizedInterest)}
+            icon={<IconCreditCard />}
+          />
+          <StatCard
+            label="Anticipos aprobados"
+            value={formatAmount(balance.advancesApproved)}
+            icon={<IconCreditCard />}
+          />
+          <StatCard
+            label="Saldo de garantía"
+            value={formatAmount(balance.balance)}
+            icon={<IconCreditCard />}
+            accent
+          />
+        </div>
       )}
-    </div>
+
+      <section className="mb-6 rounded-2xl border border-gray-300 bg-white p-6">
+        <h2 className="mb-4 text-base font-semibold text-gray-900">
+          Garantía trimestral (Art. 142.a)
+        </h2>
+        <div className="mb-4 flex flex-wrap items-end gap-4">
+          <Input
+            label="Generar hasta"
+            type="date"
+            value={depositUntil}
+            onChange={(e) => setDepositUntil(e.target.value)}
+          />
+          <Select
+            label="Ubicación de la garantía"
+            value={depositLocation}
+            onChange={(e) => setDepositLocation(e.target.value)}
+            options={LOCATION_OPTIONS}
+          />
+          <Button
+            variant="secondary"
+            onClick={handleGenerateDeposits}
+            loading={isSubmitting}
+          >
+            Generar trimestres
+          </Button>
+        </div>
+        <Table
+          columns={depositColumns}
+          data={deposits}
+          isLoading={isLoading}
+          emptyMessage="No hay depósitos generados."
+        />
+      </section>
+
+      <section className="mb-6 rounded-2xl border border-gray-300 bg-white p-6">
+        <h2 className="mb-4 text-base font-semibold text-gray-900">
+          Intereses sobre la garantía (Art. 143)
+        </h2>
+        <div className="mb-4 flex flex-wrap items-end gap-4">
+          <Input
+            label="Desde"
+            type="date"
+            value={interestFrom}
+            onChange={(e) => setInterestFrom(e.target.value)}
+          />
+          <Input
+            label="Hasta"
+            type="date"
+            value={interestTo}
+            onChange={(e) => setInterestTo(e.target.value)}
+          />
+          <Button
+            variant="secondary"
+            onClick={handleGenerateInterest}
+            loading={isSubmitting}
+          >
+            Generar intereses
+          </Button>
+        </div>
+        <Table
+          columns={interestColumns}
+          data={interest}
+          isLoading={isLoading}
+          emptyMessage="No hay intereses generados."
+        />
+      </section>
+
+      <section className="rounded-2xl border border-gray-300 bg-white p-6">
+        <h2 className="mb-4 text-base font-semibold text-gray-900">
+          Anticipos sobre la garantía (Art. 144)
+          {availableAdvance && (
+            <span className="ml-2 font-normal text-gray-400">
+              Disponible: {formatAmount(availableAdvance)}
+            </span>
+          )}
+        </h2>
+        <div className="mb-4 grid max-w-2xl grid-cols-1 gap-4 md:grid-cols-3">
+          <Input
+            label="Monto solicitado"
+            type="number"
+            step="0.01"
+            value={advanceForm.requested_amount}
+            onChange={(e) =>
+              setAdvanceForm((p) => ({
+                ...p,
+                requested_amount: e.target.value,
+              }))
+            }
+          />
+          <Select
+            label="Motivo"
+            value={advanceForm.reason}
+            onChange={(e) =>
+              setAdvanceForm((p) => ({ ...p, reason: e.target.value }))
+            }
+            options={REASON_OPTIONS}
+          />
+          <div className="flex items-end">
+            <Button
+              variant="secondary"
+              onClick={handleCreateAdvance}
+              loading={isSubmitting}
+            >
+              Solicitar anticipo
+            </Button>
+          </div>
+        </div>
+        <Table
+          columns={advanceColumns}
+          data={advances}
+          isLoading={isLoading}
+          emptyMessage="No hay anticipos registrados."
+        />
+      </section>
+    </>
   );
 }

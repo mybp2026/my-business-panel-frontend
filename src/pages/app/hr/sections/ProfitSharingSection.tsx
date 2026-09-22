@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-import { authApi, employeeApi, hrProfitSharingApi } from "@/api";
+import { hrProfitSharingApi } from "@/api";
 
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -9,13 +9,13 @@ import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
 import { Table } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
+import { useHrEmployee } from "@/context/HrEmployeeContext";
 
 import { IconTrendingUp } from "@/assets/icons";
 
 import type { Column } from "@/interfaces/components/ui/TableProps.interface";
 import type { ToastMode } from "@/interfaces/components/ui/ToastProps.interface";
 import type {
-  HrEmployeeRecord,
   HrProfitSharingDetail,
   HrProfitSharingPeriod,
 } from "@/interfaces/entities/Hr.interface";
@@ -31,7 +31,10 @@ const formatAmount = (value: number | string | null | undefined) =>
         maximumFractionDigits: 2,
       });
 
-const STATUS_VARIANT: Record<HrProfitSharingPeriod["status"], "gray" | "yellow" | "green"> = {
+const STATUS_VARIANT: Record<
+  HrProfitSharingPeriod["status"],
+  "gray" | "yellow" | "green"
+> = {
   abierto: "gray",
   calculado: "yellow",
   cerrado: "green",
@@ -43,11 +46,12 @@ const STATUS_LABEL: Record<HrProfitSharingPeriod["status"], string> = {
   cerrado: "Cerrado",
 };
 
-export function HRProfitSharingPage() {
-  const [employees, setEmployees] = useState<HrEmployeeRecord[]>([]);
+export function ProfitSharingSection() {
+  const { employeeId, employees, employeeOptions } = useHrEmployee();
+
+  const [periods, setPeriods] = useState<HrProfitSharingPeriod[]>([]);
   const [period, setPeriod] = useState<HrProfitSharingPeriod | null>(null);
   const [details, setDetails] = useState<HrProfitSharingDetail[]>([]);
-  const [loadPeriodId, setLoadPeriodId] = useState("");
 
   const [createForm, setCreateForm] = useState({
     fiscal_year: currentYear,
@@ -61,32 +65,32 @@ export function HRProfitSharingPage() {
   const [bonusYear, setBonusYear] = useState(currentYear);
   const [bonusPreview, setBonusPreview] = useState<{
     amount?: string;
+    days?: number;
     [key: string]: unknown;
   } | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ mode: ToastMode; message: string } | null>(
-    null,
-  );
+  const [toast, setToast] = useState<{
+    mode: ToastMode;
+    message: string;
+  } | null>(null);
+
+  const loadPeriods = async () => {
+    try {
+      setPeriods(await hrProfitSharingApi.listPeriods());
+    } catch {
+      // el listado no debe bloquear la creacion de un periodo nuevo
+    }
+  };
 
   useEffect(() => {
-    (async () => {
-      const currentUser = await authApi.getCurrentUser();
-      const tenantId = currentUser?.tenant?.tenant_id ?? "";
-      if (!tenantId) return;
-      setEmployees(await employeeApi.listByTenant(tenantId));
-    })();
+    loadPeriods();
   }, []);
 
-  const employeeOptions = useMemo(
-    () =>
-      employees.map((e) => ({
-        value: e.employee_id,
-        label: `${e.first_name} ${e.last_name}`,
-      })),
-    [employees],
-  );
+  useEffect(() => {
+    if (employeeId) setBonusEmployeeId(employeeId);
+  }, [employeeId]);
 
   const employeeName = (id: string) => {
     const emp = employees.find((e) => e.employee_id === id);
@@ -103,28 +107,35 @@ export function HRProfitSharingPage() {
       const created = await hrProfitSharingApi.createPeriod(createForm);
       setPeriod(created);
       setDetails([]);
+      await loadPeriods();
       setToast({ mode: "success", message: "Periodo creado correctamente" });
     } catch (error) {
       setToast({
         mode: "error",
-        message: error instanceof Error ? error.message : "Error creando periodo",
+        message:
+          error instanceof Error ? error.message : "Error creando periodo",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleLoadPeriod = async () => {
-    if (!loadPeriodId) return;
+  const handleSelectPeriod = async (periodId: string) => {
+    if (!periodId) {
+      setPeriod(null);
+      setDetails([]);
+      return;
+    }
     setIsLoading(true);
     try {
-      const loaded = await hrProfitSharingApi.getPeriod(loadPeriodId);
+      const loaded = await hrProfitSharingApi.getPeriod(periodId);
       setPeriod(loaded);
-      await reloadDetails(loadPeriodId);
+      await reloadDetails(periodId);
     } catch (error) {
       setToast({
         mode: "error",
-        message: error instanceof Error ? error.message : "Error cargando periodo",
+        message:
+          error instanceof Error ? error.message : "Error cargando periodo",
       });
     } finally {
       setIsLoading(false);
@@ -135,7 +146,10 @@ export function HRProfitSharingPage() {
     if (!period) return;
     const value = parseFloat(liquidBenefits);
     if (!value || value < 0) {
-      setToast({ mode: "error", message: "Ingresa un monto de beneficios líquidos válido" });
+      setToast({
+        mode: "error",
+        message: "Ingresa un monto de beneficios líquidos válido",
+      });
       return;
     }
     setIsSubmitting(true);
@@ -144,14 +158,16 @@ export function HRProfitSharingPage() {
         period.profit_period_id,
         { liquid_benefits: value },
       );
-      setPeriod(updated);
+      setPeriod({ ...period, ...updated });
       setLiquidBenefits("");
       setToast({ mode: "success", message: "Beneficios líquidos registrados" });
     } catch (error) {
       setToast({
         mode: "error",
         message:
-          error instanceof Error ? error.message : "Error registrando beneficios",
+          error instanceof Error
+            ? error.message
+            : "Error registrando beneficios",
       });
     } finally {
       setIsSubmitting(false);
@@ -172,7 +188,8 @@ export function HRProfitSharingPage() {
     } catch (error) {
       setToast({
         mode: "error",
-        message: error instanceof Error ? error.message : "Error calculando reparto",
+        message:
+          error instanceof Error ? error.message : "Error calculando reparto",
       });
     } finally {
       setIsSubmitting(false);
@@ -185,11 +202,13 @@ export function HRProfitSharingPage() {
     try {
       const closed = await hrProfitSharingApi.close(period.profit_period_id);
       setPeriod(closed);
+      await loadPeriods();
       setToast({ mode: "success", message: "Periodo cerrado correctamente" });
     } catch (error) {
       setToast({
         mode: "error",
-        message: error instanceof Error ? error.message : "Error cerrando periodo",
+        message:
+          error instanceof Error ? error.message : "Error cerrando periodo",
       });
     } finally {
       setIsSubmitting(false);
@@ -204,7 +223,7 @@ export function HRProfitSharingPage() {
         bonusEmployeeId,
         bonusYear,
       );
-      setBonusPreview(result as { amount?: string });
+      setBonusPreview(result as { amount?: string; days?: number });
     } catch (error) {
       setToast({
         mode: "error",
@@ -229,7 +248,10 @@ export function HRProfitSharingPage() {
         paid_at: todayIso(),
       });
       setBonusPreview(null);
-      setToast({ mode: "success", message: "Bonificación pagada correctamente" });
+      setToast({
+        mode: "success",
+        message: "Bonificación pagada correctamente",
+      });
     } catch (error) {
       setToast({
         mode: "error",
@@ -269,8 +291,13 @@ export function HRProfitSharingPage() {
     },
   ];
 
+  const periodOptions = periods.map((p) => ({
+    value: p.profit_period_id,
+    label: `${p.fiscal_year} · ${STATUS_LABEL[p.status]}`,
+  }));
+
   return (
-    <div className="p-6 lg:p-8">
+    <>
       {toast && (
         <Toast
           mode={toast.mode}
@@ -279,16 +306,32 @@ export function HRProfitSharingPage() {
         />
       )}
 
-      <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold text-gray-900">Utilidades</h1>
-        <p className="text-gray-600">
-          Reparto de beneficios líquidos (Art. 131) y bonificación de fin de
-          año (Art. 132).
-        </p>
-      </div>
+      <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="rounded-2xl border border-gray-300 bg-white p-6">
+          <h2 className="mb-4 text-base font-semibold text-gray-900">
+            Ejercicio de reparto
+          </h2>
+          <div className="space-y-4">
+            <Select
+              label="Ejercicio existente"
+              value={period?.profit_period_id ?? ""}
+              onChange={(e) => handleSelectPeriod(e.target.value)}
+              options={
+                periodOptions.length
+                  ? periodOptions
+                  : [{ value: "", label: "Todavía no hay ejercicios" }]
+              }
+              placeholder="Selecciona un ejercicio"
+            />
+            {period && (
+              <Button variant="ghost" onClick={() => handleSelectPeriod("")}>
+                Crear uno nuevo
+              </Button>
+            )}
+          </div>
+        </div>
 
-      {!period && (
-        <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+        {!period && (
           <div className="rounded-2xl border border-gray-300 bg-white p-6">
             <h2 className="mb-4 text-base font-semibold text-gray-900">
               Crear periodo de reparto
@@ -304,6 +347,7 @@ export function HRProfitSharingPage() {
                     fiscal_year: Number(e.target.value),
                   }))
                 }
+                required
               />
               <Input
                 label="Inicio del ejercicio"
@@ -315,6 +359,7 @@ export function HRProfitSharingPage() {
                     fiscal_year_start: e.target.value,
                   }))
                 }
+                required
               />
               <Input
                 label="Fin del ejercicio"
@@ -326,6 +371,7 @@ export function HRProfitSharingPage() {
                     fiscal_year_end: e.target.value,
                   }))
                 }
+                required
               />
               <Select
                 label="Tipo de entidad"
@@ -349,29 +395,8 @@ export function HRProfitSharingPage() {
               </Button>
             </div>
           </div>
-
-          <div className="rounded-2xl border border-gray-300 bg-white p-6">
-            <h2 className="mb-4 text-base font-semibold text-gray-900">
-              Cargar periodo existente
-            </h2>
-            <div className="space-y-4">
-              <Input
-                label="ID del periodo"
-                value={loadPeriodId}
-                onChange={(e) => setLoadPeriodId(e.target.value)}
-                hint="El profit_period_id devuelto al crear el periodo."
-              />
-              <Button
-                variant="secondary"
-                onClick={handleLoadPeriod}
-                loading={isLoading}
-              >
-                Cargar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {period && (
         <>
@@ -384,12 +409,10 @@ export function HRProfitSharingPage() {
                 </Badge>
               </p>
               <p className="mt-1 text-xs text-gray-400">
-                ID: {period.profit_period_id}
+                Vence {period.payment_deadline?.slice(0, 10)} (cierre + 2 meses,
+                Art. 137)
               </p>
             </div>
-            <Button variant="ghost" onClick={() => setPeriod(null)}>
-              Cambiar de periodo
-            </Button>
           </div>
 
           <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-3">
@@ -410,6 +433,7 @@ export function HRProfitSharingPage() {
                 "es-VE",
                 { style: "percent", maximumFractionDigits: 2 },
               )}
+              sublabel="Piso legal 15% (Art. 131)"
               icon={<IconTrendingUp />}
             />
           </div>
@@ -449,7 +473,14 @@ export function HRProfitSharingPage() {
             </div>
           )}
 
-          <div className="rounded-2xl border border-gray-300 bg-white p-6">
+          <div className="mb-6 rounded-2xl border border-gray-300 bg-white p-6">
+            <h2 className="mb-1 text-base font-semibold text-gray-900">
+              Reparto por trabajador
+            </h2>
+            <p className="mb-4 text-sm text-gray-500">
+              La cuota se topa entre 30 y 120 días de salario, prorrateados por
+              meses completos de servicio (Art. 131).
+            </p>
             <Table
               columns={detailColumns}
               data={details}
@@ -460,10 +491,14 @@ export function HRProfitSharingPage() {
         </>
       )}
 
-      <section className="mt-6 rounded-2xl border border-gray-300 bg-white p-6">
-        <h2 className="mb-4 text-base font-semibold text-gray-900">
+      <section className="rounded-2xl border border-gray-300 bg-white p-6">
+        <h2 className="mb-1 text-base font-semibold text-gray-900">
           Bonificación de fin de año (Art. 132)
         </h2>
+        <p className="mb-4 text-sm text-gray-500">
+          Anticipo obligatorio de diciembre, mínimo 30 días. Si el ejercicio
+          cierra sin beneficios, lo pagado no se cobra de vuelta.
+        </p>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Select
             label="Empleado"
@@ -493,7 +528,13 @@ export function HRProfitSharingPage() {
             )}
           </div>
         </div>
+        {bonusPreview?.days && (
+          <p className="mt-3 text-sm text-gray-600">
+            {bonusPreview.days} días de salario ={" "}
+            {formatAmount(bonusPreview.amount)}
+          </p>
+        )}
       </section>
-    </div>
+    </>
   );
 }
