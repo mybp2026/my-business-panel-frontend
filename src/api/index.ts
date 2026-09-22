@@ -13,6 +13,7 @@ export { hrProfitSharingApi } from "./hrProfitSharing.api";
 export { hrSettlementApi } from "./hrSettlement.api";
 export { hrDeductionsApi } from "./hrDeductions.api";
 export { hrBeneficiariesApi } from "./hrBeneficiaries.api";
+export { creditDebitNoteApi } from "./creditDebitNote.api";
 export { overtimeApi } from "./overtime.api";
 export { userApi } from "./user.api";
 export { categoryApi } from "./category.api";

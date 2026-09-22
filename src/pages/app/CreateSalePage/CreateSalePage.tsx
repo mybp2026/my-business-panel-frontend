@@ -50,7 +50,8 @@ import {
   promotionAppliesToItem,
 } from "@/utils/promotion";
 
-import { identificationTypes } from "@/constants/identification-types";
+import { documentApi } from "@/api/document.api";
+import type { DocumentType } from "@/interfaces/entities/DocumentType.interface";
 import { paymentMethods, currencies } from "@/constants/payment-methods";
 
 import type { Promotion } from "@/interfaces/entities/Promotion.interface";
@@ -170,6 +171,17 @@ export function CreateSalePage() {
   const [isLoadingCashRegisters, setIsLoadingCashRegisters] = useState(false);
   const [adMessage, setAdMessage] = useState("");
   const [dueDate, setDueDate] = useState("");
+  // Catalogo real de identification_type (V/E/J/G/P/C, Venezuela) -- antes
+  // era un array hardcodeado con IDs fijos que no sobreviven a un entorno
+  // donde la secuencia de la tabla difiere (dev vs staging/Supabase).
+  const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
+
+  useEffect(() => {
+    documentApi
+      .getAll()
+      .then(setDocumentTypes)
+      .catch(() => setDocumentTypes([]));
+  }, []);
 
   const [step, setStep] = useState<"lookup" | "items">("lookup");
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -1681,9 +1693,9 @@ export function CreateSalePage() {
                   Number(e.target.value),
                 )
               }
-              options={identificationTypes.map((t) => ({
-                value: String(t.value),
-                label: t.label,
+              options={documentTypes.map((t) => ({
+                value: String(t.identification_type_id),
+                label: `${t.type_name} (${t.ident_code})`,
               }))}
               required
             />

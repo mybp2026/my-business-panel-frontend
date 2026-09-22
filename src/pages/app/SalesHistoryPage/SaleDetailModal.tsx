@@ -3,6 +3,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { usePrintInvoice } from "@/hooks/usePrintInvoice";
+import { CreditDebitNotesSection } from "./CreditDebitNotesSection";
 import {
   getInvoiceForSale,
   getSaleItemsForSale,
@@ -306,6 +307,14 @@ export function SaleDetailModal({
               </p>
             )}
           </div>
+
+        {/* ── Notas de crédito / débito ──────────────────────────────── */}
+        {!isLoading && digitalInvoice && (
+          <CreditDebitNotesSection
+            invoiceId={digitalInvoice.invoice_id}
+            currencySymbol={symbol}
+          />
+        )}
 
         <div className="flex justify-end pt-2">
           <Button
