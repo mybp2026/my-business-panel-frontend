@@ -327,7 +327,7 @@ export const MODULES: Record<ModuleId, Module> = {
       },
       {
         id: "parameters",
-        label: "Parametros de nomina",
+        label: "Configuracion de nomina",
         path: "/app/hr/parameters",
         icon: "settings",
         rolesAllowed: [1, 2],

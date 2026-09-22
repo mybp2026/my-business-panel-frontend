@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
 import { Table } from "@/components/ui/Table";
+import { Tabs } from "@/components/ui/Tabs";
 import { Toast } from "@/components/ui/Toast";
 import { useAuth } from "@/context/AuthContext";
 
@@ -15,6 +16,8 @@ import { IconPlus, IconSettings } from "@/assets/icons";
 import type { Column } from "@/interfaces/components/ui/TableProps.interface";
 import type { ToastMode } from "@/interfaces/components/ui/ToastProps.interface";
 import type { HrPayrollParameter } from "@/interfaces/entities/Hr.interface";
+
+import { ConceptsSection } from "./ConceptsSection";
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
@@ -136,6 +139,8 @@ export function HRParametersPage() {
     valid_from: todayIso(),
     source: "",
   });
+
+  const [activeTab, setActiveTab] = useState<"legal" | "concepts">("legal");
 
   const paramOptions = useMemo(
     () =>
@@ -276,15 +281,29 @@ export function HRParametersPage() {
 
       <div className="mb-8">
         <h1 className="mb-2 text-3xl font-bold text-gray-900">
-          Parámetros de nómina
+          Configuración de nómina
         </h1>
         <p className="text-gray-600">
-          Pisos legales y valores operativos de la LOTTT (tasas, días,
-          recargos y topes) con vigencia por fecha.
+          Pisos legales con vigencia por fecha y catálogo de conceptos que usa
+          el motor de cálculo — configuración de una sola vez por tenant, no
+          por período.
         </p>
       </div>
 
-      {missing.length > 0 && (
+      <div className="mb-6">
+        <Tabs
+          tabs={[
+            { id: "legal", label: "Parámetros legales" },
+            { id: "concepts", label: "Conceptos de nómina" },
+          ]}
+          activeId={activeTab}
+          onChange={(id) => setActiveTab(id as "legal" | "concepts")}
+        />
+      </div>
+
+      {activeTab === "concepts" && <ConceptsSection />}
+
+      {activeTab === "legal" && missing.length > 0 && (
         <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           <p className="mb-1 font-semibold">
             Faltan parámetros obligatorios para hoy
@@ -296,6 +315,7 @@ export function HRParametersPage() {
         </div>
       )}
 
+      {activeTab === "legal" && (
       <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
         {requiredCurrent.map((key) => {
           const current = currentByKey.get(key);
@@ -315,8 +335,9 @@ export function HRParametersPage() {
           );
         })}
       </div>
+      )}
 
-      {canEdit && (
+      {activeTab === "legal" && canEdit && (
         <div className="mb-6 rounded-2xl border border-gray-300 bg-white p-6">
           <h2 className="mb-4 text-base font-semibold text-gray-900">
             Cargar nuevo valor / vigencia
@@ -375,6 +396,7 @@ export function HRParametersPage() {
         </div>
       )}
 
+      {activeTab === "legal" && (
       <div className="rounded-2xl border border-gray-300 bg-white p-6">
         <h2 className="mb-4 text-base font-semibold text-gray-900">
           Historial de vigencias
@@ -386,6 +408,7 @@ export function HRParametersPage() {
           emptyMessage="No hay parámetros registrados todavía."
         />
       </div>
+      )}
     </div>
   );
 }
