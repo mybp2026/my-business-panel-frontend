@@ -96,6 +96,13 @@ export const hrProfitSharingApi = {
     );
   },
 
+  async listPeriods(): Promise<HrProfitSharingPeriod[]> {
+    return getJson(
+      "/profit-sharing/periods",
+      "Error al cargar los periodos de utilidades",
+    );
+  },
+
   async fraction(employeeId: string, endDate: string) {
     return getJson(
       `/profit-sharing/fraction/${employeeId}?endDate=${endDate}`,

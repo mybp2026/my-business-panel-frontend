@@ -439,6 +439,42 @@ export interface YearEndBonusPayload {
 // Liquidacion final (Arts. 92, 106, 142, 144, 154, 195)
 // ---------------------------------------------------------------
 
+/**
+ * Causales de egreso (LOTTT). La causal decide si aplica la
+ * indemnizacion del Art. 92 y si se abre el reparto entre herederos
+ * del Art. 145, por eso es obligatoria al registrar el egreso.
+ */
+export type HrTerminationType =
+  | "despido_injustificado"
+  | "despido_justificado"
+  | "renuncia"
+  | "causa_ajena_al_trabajador"
+  | "vencimiento_contrato"
+  | "fallecimiento";
+
+export interface TerminateEmployeePayload {
+  termination_date: string;
+  termination_type: HrTerminationType;
+  termination_reason?: string;
+}
+
+export interface UpdateTerminationPayload {
+  termination_type: HrTerminationType;
+  termination_reason?: string;
+}
+
+export interface HrTerminationInfo {
+  message: string;
+  employee: {
+    employee_id: string;
+    tenant_id: string;
+    hire_date: string;
+    termination_date: string | null;
+    termination_type: HrTerminationType | null;
+    termination_reason: string | null;
+  };
+}
+
 export interface HrSettlementItem {
   settlement_item_id: string;
   settlement_id: string;
@@ -587,6 +623,27 @@ export interface HrEmployeeBeneficiary {
   share_percentage: number | string | null;
   share_amount: number | string | null;
   created_at: string;
+}
+
+/** Respuesta de GET /beneficiaries/:employeeId/claim-window (Art. 145). */
+export interface HrClaimWindow {
+  terminationDate: string | null;
+  deadline: string | null;
+  open: boolean;
+  totalClaimants: number;
+  validatedClaimants: number;
+  pendingClaimants: number;
+  article: string;
+}
+
+/** Respuesta de POST /beneficiaries/:employeeId/distribute (Art. 145). */
+export interface HrDistributionResult {
+  count: number;
+  sharePercentage: string;
+  shareAmount: string;
+  remainder: string;
+  total: string;
+  article: string;
 }
 
 export interface CreateBeneficiaryPayload {

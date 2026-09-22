@@ -369,67 +369,34 @@ export const privateRoutes: RouteObject[] = [
               return { Component: HRParametersPage };
             },
           },
+          // Modulos agrupados por pestanas: comparten el selector de
+          // empleado y reemplazan a las 7 pantallas sueltas que antes
+          // repetian el mismo cascaron.
           {
-            path: "hr/overtime",
+            path: "hr/compensation",
             lazy: async () => {
-              const { HROvertimePage } = await import(
-                "@/pages/app/HROvertimePage/HROvertimePage"
+              const { HRCompensationPage } = await import(
+                "@/pages/app/hr/HRCompensationPage"
               );
-              return { Component: HROvertimePage };
+              return { Component: HRCompensationPage };
             },
           },
           {
-            path: "hr/vacations",
+            path: "hr/benefits",
             lazy: async () => {
-              const { HRVacationsPage } = await import(
-                "@/pages/app/HRVacationsPage/HRVacationsPage"
+              const { HRBenefitsPage } = await import(
+                "@/pages/app/hr/HRBenefitsPage"
               );
-              return { Component: HRVacationsPage };
+              return { Component: HRBenefitsPage };
             },
           },
           {
-            path: "hr/severance",
+            path: "hr/offboarding",
             lazy: async () => {
-              const { HRSeverancePage } = await import(
-                "@/pages/app/HRSeverancePage/HRSeverancePage"
+              const { HROffboardingPage } = await import(
+                "@/pages/app/hr/HROffboardingPage"
               );
-              return { Component: HRSeverancePage };
-            },
-          },
-          {
-            path: "hr/profit-sharing",
-            lazy: async () => {
-              const { HRProfitSharingPage } = await import(
-                "@/pages/app/HRProfitSharingPage/HRProfitSharingPage"
-              );
-              return { Component: HRProfitSharingPage };
-            },
-          },
-          {
-            path: "hr/deductions",
-            lazy: async () => {
-              const { HRDeductionsPage } = await import(
-                "@/pages/app/HRDeductionsPage/HRDeductionsPage"
-              );
-              return { Component: HRDeductionsPage };
-            },
-          },
-          {
-            path: "hr/beneficiaries",
-            lazy: async () => {
-              const { HRBeneficiariesPage } = await import(
-                "@/pages/app/HRBeneficiariesPage/HRBeneficiariesPage"
-              );
-              return { Component: HRBeneficiariesPage };
-            },
-          },
-          {
-            path: "hr/settlement",
-            lazy: async () => {
-              const { HRSettlementPage } = await import(
-                "@/pages/app/HRSettlementPage/HRSettlementPage"
-              );
-              return { Component: HRSettlementPage };
+              return { Component: HROffboardingPage };
             },
           },
           {

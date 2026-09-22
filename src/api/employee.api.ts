@@ -5,7 +5,12 @@ import type {
   IEmployeeDetail,
   UpdateEmployeePayload,
 } from "@/interfaces/entities/Employee.interface";
-import type { HrEmployeeRecord } from "@/interfaces/entities/Hr.interface";
+import type {
+  HrEmployeeRecord,
+  HrTerminationInfo,
+  TerminateEmployeePayload,
+  UpdateTerminationPayload,
+} from "@/interfaces/entities/Hr.interface";
 
 export interface CreateEmployeeWithContractPayload {
   tenant_id: string;
@@ -132,5 +137,49 @@ export const employeeApi = {
     if (!response.ok) {
       await buildError(response, "Error al desactivar empleado");
     }
+  },
+
+  /**
+   * Registra el egreso. La causal decide la indemnizacion del Art. 92
+   * y, si es fallecimiento, abre el reparto entre herederos (Art. 145),
+   * por eso es obligatoria.
+   */
+  async terminate(
+    employeeId: string,
+    data: TerminateEmployeePayload,
+  ): Promise<HrTerminationInfo> {
+    const response = await fetch(`${url}/employee/${employeeId}/terminate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      await buildError(response, "Error al registrar el egreso");
+    }
+
+    const json: ApiResponse<HrTerminationInfo> = await response.json();
+    return json.data;
+  },
+
+  /** Corrige la causal de un egreso ya registrado. */
+  async updateTermination(
+    employeeId: string,
+    data: UpdateTerminationPayload,
+  ): Promise<HrTerminationInfo> {
+    const response = await fetch(`${url}/employee/${employeeId}/termination`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      await buildError(response, "Error al actualizar la causal de egreso");
+    }
+
+    const json: ApiResponse<HrTerminationInfo> = await response.json();
+    return json.data;
   },
 };
