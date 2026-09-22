@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/v1/:path*",
-      "destination": "http://production-89914-alb-768516393.us-east-1.elb.amazonaws.com/api/v1/:path*"
+      "destination": "https://my-business-panel-backend.onrender.com/api/v1/:path*"
     },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
