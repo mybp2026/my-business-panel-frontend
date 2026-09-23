@@ -173,7 +173,7 @@ export function AccountsReceivablePage() {
     setIsFetchingRate(true);
     setRateError(null);
     exchangeRateApi
-      .getLatest(selectedCurrencyId, BASE_CURRENCY_ID)
+      .getLatest()
       .then((rate) => {
         if (cancelled) return;
         if (!rate) {
