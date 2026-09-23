@@ -25,6 +25,13 @@ export interface CreditDebitNote {
   created_at: string;
 }
 
+/** Fila del listado tenant-wide (GET /credit-debit-notes) -- incluye
+ *  contexto de la venta/cliente que la nota ajusta. */
+export interface CreditDebitNoteListItem extends CreditDebitNote {
+  sale_id: string;
+  customer_name: string | null;
+}
+
 export interface CreateCreditDebitNotePayload {
   invoice_id: string;
   note_type: CreditDebitNoteType;

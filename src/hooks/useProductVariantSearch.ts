@@ -185,6 +185,10 @@ export function useProductVariantSearch({
     (term: string) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
 
+      // Feedback inmediato: "buscando" se muestra al tipear, la request
+      // real recien se dispara al vencer el debounce.
+      setIsLoading(true);
+
       return new Promise<void>((resolve) => {
         debounceRef.current = setTimeout(() => {
           fetchVariants(term.trim()).then(resolve);

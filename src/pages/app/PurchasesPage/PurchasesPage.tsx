@@ -100,8 +100,14 @@ export function PurchasesPage() {
     currentTenantName,
     isSuperuser,
     tenants,
+    exchangeRate,
   } = useLoaderData() as PurchasesPageLoaderData;
   const { user } = useAuth();
+
+  // El catálogo de productos (product_variant.unit_price/cost_price) está
+  // en USD; las órdenes de compra siguen operando en Bs., así que el costo
+  // sugerido se convierte al seleccionar el producto (ver handleProductSelect).
+  const effectiveExchangeRate = Number(exchangeRate?.rate ?? 0);
 
   const canManage = user?.role.role_id === 1 || user?.role.role_id === 2;
 
@@ -313,6 +319,20 @@ export function PurchasesPage() {
     index: number,
     selection: ProductVariantSelection,
   ) => {
+    if (effectiveExchangeRate <= 0) {
+      setToast({
+        mode: "error",
+        message:
+          "No hay tasa de cambio USD → Bs. cargada. No se puede sugerir el costo del producto.",
+      });
+      return;
+    }
+    // selection.unit_price viene del catálogo en USD; se convierte a Bs.
+    // como sugerencia inicial -- el campo sigue editable (es el costo
+    // realmente pactado con el proveedor, puede diferir del catálogo).
+    const suggestedCostInVes = Number(
+      (selection.unit_price * effectiveExchangeRate).toFixed(2),
+    );
     setFormData((prev) => {
       const items = prev.items.map((item, itemIndex) =>
         itemIndex === index
@@ -321,7 +341,7 @@ export function PurchasesPage() {
               product_variant_id: selection.product_variant_id,
               variant_name: selection.variant_name,
               sku: selection.sku,
-              unit_price: String(selection.unit_price),
+              unit_price: String(suggestedCostInVes),
             }
           : item,
       );
@@ -837,7 +857,7 @@ export function PurchasesPage() {
                       Number(item.quantity_ordered || 0) *
                         Number(item.unit_price || 0),
                     0,
-                  ) * 0.13,
+                  ) * 0.16,
                 )}
               />
             </div>

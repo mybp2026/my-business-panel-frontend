@@ -115,7 +115,7 @@ interface PaymentSplit {
   currencyId: number;
 }
 
-const TAX_RATE = 0.13;
+const TAX_RATE = 0.16;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Moneda base del sistema (Venezuela). Antes se llamaba VES_CURRENCY_ID
 // por el legado de Costa Rica, apuntando al mismo id.
@@ -230,6 +230,7 @@ export function CreateSalePage() {
 
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [toast, setToast] = useState<{
     mode: ToastMode;
     message: string;
@@ -464,6 +465,15 @@ export function CreateSalePage() {
     return Number.isFinite(serverRate) && serverRate > 0 ? serverRate : 0;
   }, [serverExchangeRate]);
 
+  // El catálogo (product_variant.unit_price) se captura y almacena en USD
+  // (moneda base, spec Venezuela). El carrito sigue operando en Bs. (CRC en
+  // el nombre legado) como antes, así que cada producto se convierte a Bs.
+  // en el momento en que entra al carrito con la tasa vigente.
+  const usdCatalogPriceToVes = useCallback(
+    (usdAmount: number) => round2(usdAmount * effectiveExchangeRate),
+    [effectiveExchangeRate],
+  );
+
   const convertCrcToSaleCurrency = useCallback(
     (amount: number) => {
       if (currencyId === VES_CURRENCY_ID) return round2(amount);
@@ -473,19 +483,6 @@ export function CreateSalePage() {
     [currencyId, effectiveExchangeRate],
   );
 
-  const convertSaleCurrencyToCrc = useCallback(
-    (amount: number) => {
-      if (currencyId === VES_CURRENCY_ID) return round2(amount);
-      if (effectiveExchangeRate <= 0) return null;
-      return round2(amount * effectiveExchangeRate);
-    },
-    [currencyId, effectiveExchangeRate],
-  );
-
-  const grossSubtotalDisplay = useMemo(
-    () => convertCrcToSaleCurrency(grossSubtotal),
-    [convertCrcToSaleCurrency, grossSubtotal],
-  );
   const discountAmountDisplay = useMemo(
     () => convertCrcToSaleCurrency(discountAmount),
     [convertCrcToSaleCurrency, discountAmount],
@@ -507,13 +504,21 @@ export function CreateSalePage() {
     return round2(totalAmount / effectiveExchangeRate);
   }, [effectiveExchangeRate, totalAmount]);
 
-  // Total expressed in CRC. Only meaningful when the sale currency is USD —
-  // for CRC sales this just equals the total. For other currencies we leave
-  // it null since we don't have a rate.
-  const totalInColones = useMemo(() => {
-    if (currencyId === VES_CURRENCY_ID) return totalAmount;
-    return convertSaleCurrencyToCrc(totalAmountDisplay);
-  }, [convertSaleCurrencyToCrc, currencyId, totalAmount, totalAmountDisplay]);
+  // Equivalente en USD de cada card de monto del resumen. El carrito guarda
+  // todo internamente en Bs. (grossSubtotal/discountAmount/subtotal), asi
+  // que el equivalente en dolares se obtiene dividiendo por la tasa vigente.
+  const grossSubtotalInDollars = useMemo(() => {
+    if (effectiveExchangeRate <= 0) return null;
+    return round2(grossSubtotal / effectiveExchangeRate);
+  }, [effectiveExchangeRate, grossSubtotal]);
+  const discountAmountInDollars = useMemo(() => {
+    if (effectiveExchangeRate <= 0) return null;
+    return round2(discountAmount / effectiveExchangeRate);
+  }, [effectiveExchangeRate, discountAmount]);
+  const subtotalInDollars = useMemo(() => {
+    if (effectiveExchangeRate <= 0) return null;
+    return round2(subtotal / effectiveExchangeRate);
+  }, [effectiveExchangeRate, subtotal]);
 
   const refreshOpenCashRegisters = useCallback(async () => {
     if (!branchId) {
@@ -609,14 +614,14 @@ export function CreateSalePage() {
     };
   }, [tenantId]);
 
-  // Load latest exchange rate (USD -> CRC). Failing silently is fine — the
-  // panel just shows "no hay tasa registrada" and the cashier can type one.
+  // Load latest exchange rate (USD -> Bs.). El catalogo siempre guarda el
+  // precio en USD (spec Venezuela), asi que la tasa hace falta SIEMPRE para
+  // convertir el precio al carrito -- sin importar en que moneda se este
+  // cobrando la venta (currencyId). Antes esto se saltaba cuando currencyId
+  // era VES, lo cual bloqueaba agregar productos en ventas en bolivares.
+  // Failing silently is fine — the panel just shows "no hay tasa registrada"
+  // and the cashier can type one.
   useEffect(() => {
-    if (currencyId === VES_CURRENCY_ID) {
-      setServerExchangeRate(null);
-      return;
-    }
-
     let cancelled = false;
     exchangeRateApi
       .getLatest()
@@ -629,7 +634,7 @@ export function CreateSalePage() {
     return () => {
       cancelled = true;
     };
-  }, [currencyId]);
+  }, []);
 
   // Load exchange rates for each payment split when their currency changes
   // We load rates to convert each split's currency to CRC (as a pivot)
@@ -908,6 +913,7 @@ export function CreateSalePage() {
       });
       return;
     }
+    setIsCreatingCustomer(true);
     try {
       const created = await createCustomer({
         tenant_id: tenantId,
@@ -928,6 +934,8 @@ export function CreateSalePage() {
         mode: "error",
         message: err instanceof Error ? err.message : "Error al crear cliente",
       });
+    } finally {
+      setIsCreatingCustomer(false);
     }
   };
 
@@ -999,6 +1007,15 @@ export function CreateSalePage() {
   };
 
   const handleVariantSelect = async (selection: ProductVariantSelection) => {
+    if (effectiveExchangeRate <= 0) {
+      setToast({
+        mode: "error",
+        message:
+          "No hay tasa de cambio USD → Bs. cargada. No se pueden agregar productos hasta que se configure.",
+      });
+      return;
+    }
+
     let groupIds: string[] = [];
     let includes_iva = false;
 
@@ -1015,11 +1032,17 @@ export function CreateSalePage() {
       groupIds = [];
     }
 
-    setSelectedVariant({ ...selection, group_ids: groupIds, includes_iva });
+    const priceInVes = usdCatalogPriceToVes(selection.unit_price);
+    setSelectedVariant({
+      ...selection,
+      unit_price: priceInVes,
+      group_ids: groupIds,
+      includes_iva,
+    });
     itemForm.setValue("product_variant_id", selection.product_variant_id, {
       shouldValidate: true,
     });
-    itemForm.setValue("unit_price", selection.unit_price, {
+    itemForm.setValue("unit_price", priceInVes, {
       shouldValidate: true,
     });
   };
@@ -1047,6 +1070,15 @@ export function CreateSalePage() {
 
   const handleBarcodeScan = useCallback(
     async (sku: string) => {
+      if (effectiveExchangeRate <= 0) {
+        setToast({
+          mode: "error",
+          message:
+            "No hay tasa de cambio USD → Bs. cargada. No se pueden agregar productos hasta que se configure.",
+        });
+        return;
+      }
+
       try {
         const found = await productApi.getBySku(sku);
         if (!found?.product_variant_id) {
@@ -1069,7 +1101,9 @@ export function CreateSalePage() {
 
         const variantId = found.product_variant_id;
         const variantName = found.variant_name ?? found.product_name ?? "—";
-        const unitPrice = Number(found.unit_price ?? found.price ?? 0);
+        const unitPrice = usdCatalogPriceToVes(
+          Number(found.unit_price ?? found.price ?? 0),
+        );
 
         setItems((prev) => {
           const existingIndex = prev.findIndex(
@@ -1107,7 +1141,7 @@ export function CreateSalePage() {
         setToast({ mode: "error", message: `Error al buscar SKU: ${sku}` });
       }
     },
-    [tenantId],
+    [tenantId, effectiveExchangeRate, usdCatalogPriceToVes],
   );
 
   useBarcodeScanner(handleBarcodeScan, step === "items");
@@ -1761,7 +1795,12 @@ export function CreateSalePage() {
               <Button
                 type="submit"
                 variant="primary"
-                disabled={inlineUniquenessBlocked || inlineUniquenessProbing}
+                loading={isCreatingCustomer}
+                disabled={
+                  inlineUniquenessBlocked ||
+                  inlineUniquenessProbing ||
+                  isCreatingCustomer
+                }
                 title={
                   inlineUniquenessBlocked
                     ? "Hay datos duplicados que deben corregirse"
@@ -1770,8 +1809,8 @@ export function CreateSalePage() {
                       : undefined
                 }
               >
-                <IconPlus />
-                Crear cliente y continuar
+                {!isCreatingCustomer && <IconPlus />}
+                {isCreatingCustomer ? "Creando..." : "Crear cliente y continuar"}
               </Button>
             </div>
           </form>
@@ -1973,17 +2012,15 @@ export function CreateSalePage() {
               Subtotal bruto
             </p>
             <p className="text-2xl font-bold text-gray-900 mt-1">
-              {formatAmount(grossSubtotalDisplay, currencySymbol)}
+              {grossSubtotalInDollars !== null
+                ? formatAmount(grossSubtotalInDollars, "$")
+                : "—"}
             </p>
-            {currencyId === VES_CURRENCY_ID && totalInDollars !== null && (
-              <p className="text-xs text-gray-500 mt-1">
-                ≈{" "}
-                {formatAmount(
-                  round2(grossSubtotal / effectiveExchangeRate),
-                  "$",
-                )}
-              </p>
-            )}
+            <p className="text-xs text-gray-500 mt-1">
+              {grossSubtotalInDollars !== null
+                ? `≈ ${formatAmount(grossSubtotal, "Bs.")}`
+                : "Configure una tasa para ver el equivalente."}
+            </p>
           </div>
           <div
             className={`border rounded-xl p-4 ${
@@ -2004,46 +2041,48 @@ export function CreateSalePage() {
                 discountAmount > 0 ? "text-amber-900" : "text-gray-900"
               }`}
             >
-              -{formatAmount(discountAmountDisplay, currencySymbol)}
+              -
+              {discountAmountInDollars !== null
+                ? formatAmount(discountAmountInDollars, "$")
+                : "—"}
             </p>
-            {currencyId === VES_CURRENCY_ID && totalInDollars !== null && (
-              <p className="text-xs text-amber-700 mt-1">
-                ≈ -
-                {formatAmount(
-                  round2(discountAmount / effectiveExchangeRate),
-                  "$",
-                )}
-              </p>
-            )}
+            <p
+              className={`text-xs mt-1 ${
+                discountAmount > 0 ? "text-amber-700" : "text-gray-500"
+              }`}
+            >
+              {discountAmountInDollars !== null
+                ? `≈ -${formatAmount(discountAmount, "Bs.")}`
+                : "Configure una tasa para ver el equivalente."}
+            </p>
           </div>
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
             <p className="text-xs uppercase tracking-wider text-gray-500">
               Subtotal con descuento
             </p>
             <p className="text-2xl font-bold text-gray-900 mt-1">
-              {formatAmount(subtotalDisplay, currencySymbol)}
+              {subtotalInDollars !== null
+                ? formatAmount(subtotalInDollars, "$")
+                : "—"}
             </p>
-            {currencyId === VES_CURRENCY_ID && totalInDollars !== null && (
-              <p className="text-xs text-gray-500 mt-1">
-                ≈ {formatAmount(round2(subtotal / effectiveExchangeRate), "$")}
-              </p>
-            )}
+            <p className="text-xs text-gray-500 mt-1">
+              {subtotalInDollars !== null
+                ? `≈ ${formatAmount(subtotal, "Bs.")}`
+                : "Configure una tasa para ver el equivalente."}
+            </p>
           </div>
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
             <p className="text-xs uppercase tracking-wider text-emerald-700">
               Total con IVA ({(TAX_RATE * 100).toFixed(0)}%)
             </p>
             <p className="text-2xl font-bold text-emerald-900 mt-1">
-              {formatAmount(totalAmountDisplay, currencySymbol)}
+              {totalInDollars !== null
+                ? formatAmount(totalInDollars, "$")
+                : "—"}
             </p>
-            {currencyId === VES_CURRENCY_ID && totalInDollars !== null && (
+            {totalInDollars !== null && (
               <p className="text-xs text-emerald-700 mt-1">
-                ≈ {formatAmount(totalInDollars, "$")}
-              </p>
-            )}
-            {currencyId !== VES_CURRENCY_ID && totalInColones !== null && (
-              <p className="text-xs text-emerald-700 mt-1">
-                ≈ {formatAmount(totalInColones, "Bs.")} ·
+                ≈ {formatAmount(totalAmount, "Bs.")} ·
                 <span className="ml-1 text-emerald-600">
                   tasa{" "}
                   {effectiveExchangeRate.toLocaleString("es-CR", {
@@ -2053,13 +2092,11 @@ export function CreateSalePage() {
                 </span>
               </p>
             )}
-            {currencyId !== VES_CURRENCY_ID &&
-              totalInColones === null &&
-              effectiveExchangeRate === 0 && (
-                <p className="text-xs text-amber-700 mt-1">
-                  Configure una tasa para ver el equivalente en colones.
-                </p>
-              )}
+            {totalInDollars === null && (
+              <p className="text-xs text-amber-700 mt-1">
+                Configure una tasa para ver el equivalente en bolívares.
+              </p>
+            )}
           </div>
         </div>
 

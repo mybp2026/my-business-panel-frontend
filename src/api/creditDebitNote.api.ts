@@ -4,6 +4,7 @@ import type { ApiResponse } from "@/interfaces/api/ApiResponse.interface";
 import type {
   CreateCreditDebitNotePayload,
   CreditDebitNote,
+  CreditDebitNoteListItem,
 } from "@/interfaces/entities/CreditDebitNote.interface";
 
 const buildError = async (response: Response, fallback: string) => {
@@ -36,6 +37,19 @@ export const creditDebitNoteApi = {
       await buildError(response, "Error al cargar las notas");
     }
     const json: ApiResponse<CreditDebitNote[]> = await response.json();
+    return json.data ?? [];
+  },
+
+  async listByTenant(): Promise<CreditDebitNoteListItem[]> {
+    const response = await fetch(`${url}/credit-debit-notes`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+    if (!response.ok) {
+      await buildError(response, "Error al cargar las notas");
+    }
+    const json: ApiResponse<CreditDebitNoteListItem[]> = await response.json();
     return json.data ?? [];
   },
 

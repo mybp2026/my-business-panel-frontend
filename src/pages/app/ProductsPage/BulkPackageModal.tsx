@@ -356,6 +356,9 @@ export function BulkPackageModal({
     if (components.length === 0) {
       return "Agrega al menos un componente";
     }
+    if (parentGroupIds.length === 0) {
+      return "Asigna al menos una familia o dimensión al lote";
+    }
 
     if (useUniformPricing) {
       const price = parseFloat(uniformPrice);
@@ -724,11 +727,11 @@ export function BulkPackageModal({
           {/* Grupos/dimensiones del lote — los productos hijos los heredan */}
           <div className="space-y-1">
             <p className="text-sm font-medium text-gray-700">
-              Familias y dimensiones (opcional)
+              Familias y dimensiones <span className="text-red-600">*</span>
             </p>
             <p className="text-xs text-gray-500">
-              Los grupos asignados al lote se heredan en todos los productos
-              simples que lo componen.
+              Obligatorio: los grupos asignados al lote se heredan en todos
+              los productos simples que lo componen.
             </p>
             {tenantId ? (
               <GroupAssignmentEditor
@@ -795,21 +798,21 @@ export function BulkPackageModal({
           {useUniformPricing && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
-                label="Precio de venta (c/u) para todos"
+                label="Precio de venta (c/u) para todos (USD)"
                 type="number"
                 min="0"
                 step="0.01"
-                placeholder="Ej: 5000.00"
+                placeholder="Ej: 5.00"
                 value={uniformPrice}
                 onChange={(e) => setUniformPrice(e.target.value)}
                 required
               />
               <Input
-                label="Costo de adquisición (c/u) para todos"
+                label="Costo de adquisición (c/u) para todos (USD)"
                 type="number"
                 min="0"
                 step="0.01"
-                placeholder="Ej: 2500.00"
+                placeholder="Ej: 2.50"
                 value={uniformCost}
                 onChange={(e) => setUniformCost(e.target.value)}
                 required
@@ -887,11 +890,11 @@ export function BulkPackageModal({
                 {useUniformPricing ? (
                   <div className="rounded-lg bg-blue-50 border border-blue-100 p-3">
                     <p className="text-xs text-blue-700">
-                      Precio: Bs.
+                      Precio: ${" "}
                       {Number(uniformPrice || 0).toLocaleString("es-VE", {
                         minimumFractionDigits: 2,
                       })}{" "}
-                      | Costo: Bs.
+                      | Costo: ${" "}
                       {Number(uniformCost || 0).toLocaleString("es-VE", {
                         minimumFractionDigits: 2,
                       })}
@@ -900,7 +903,7 @@ export function BulkPackageModal({
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Input
-                      label="Precio de venta (c/u)"
+                      label="Precio de venta (c/u) (USD)"
                       type="number"
                       min="0"
                       step="0.01"
@@ -911,7 +914,7 @@ export function BulkPackageModal({
                       required
                     />
                     <Input
-                      label="Costo de adquisición (c/u)"
+                      label="Costo de adquisición (c/u) (USD)"
                       type="number"
                       min="0"
                       step="0.01"

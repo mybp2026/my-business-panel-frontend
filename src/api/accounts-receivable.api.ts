@@ -10,7 +10,7 @@ import type {
   CollectionAlertConfigResponse,
   CollectionAlertStats,
   ReceivableCatalogs,
-  SaleAccountReceivable,
+  SaleAccountReceivableListResponse,
   UpdatedSaleAccountReceivable,
 } from "@/interfaces/entities/AccountReceivable.interface";
 
@@ -40,14 +40,23 @@ const withQuery = (
 };
 
 export const accountsReceivableApi = {
-  async listReceivables(): Promise<SaleAccountReceivable[]> {
-    const res = await fetch(`${url}/pos/receivables`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-    });
+  async listReceivables(
+    page = 1,
+    limit = 50,
+  ): Promise<SaleAccountReceivableListResponse> {
+    const res = await fetch(
+      `${url}${withQuery("/pos/receivables", {
+        page: String(page),
+        limit: String(limit),
+      })}`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      },
+    );
 
-    return json<SaleAccountReceivable[]>(
+    return json<SaleAccountReceivableListResponse>(
       res,
       "Error al listar cuentas por cobrar",
     );

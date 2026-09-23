@@ -347,9 +347,9 @@ export function ProductVariantComboBox({
                         </span>
                       </div>
                       <div className="mt-0.5 text-[11px] text-gray-500">
-                        Precio:{" "}
+                        Precio (USD):{" "}
                         <span className="font-mono">
-                          {formatCurrency(getVariantPrice(variant))}
+                          ${formatCurrency(getVariantPrice(variant))}
                         </span>
                       </div>
                     </button>

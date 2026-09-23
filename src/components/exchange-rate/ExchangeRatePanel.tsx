@@ -47,20 +47,27 @@ const fmtDateTime = (value: string) =>
  * El historial es un ledger inmutable: nada se edita ni se borra, cada
  * cambio de tasa o de diferencial agrega un registro.
  */
-export function ExchangeRatePanel({ showLedger = true }: ExchangeRatePanelProps) {
+export function ExchangeRatePanel({
+  showLedger = true,
+}: ExchangeRatePanelProps) {
   const { user } = useAuth();
-  const canEdit =
-    user?.role.role_name === "admin" || user?.role.role_name === "superuser";
+  // La tasa base es un dato global (BCV): solo superuser puede cargarla.
+  // El diferencial es propio del tenant: admin y superuser pueden ajustarlo.
+  const isSuperuser = user?.role.role_name === "superuser";
+  const canEditDelta = isSuperuser || user?.role.role_name === "admin";
 
-  const [effective, setEffective] = useState<EffectiveExchangeRate | null>(null);
+  const [effective, setEffective] = useState<EffectiveExchangeRate | null>(
+    null,
+  );
   const [ledger, setLedger] = useState<ExchangeRateLedgerEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [baseInput, setBaseInput] = useState("");
   const [deltaInput, setDeltaInput] = useState("");
-  const [toast, setToast] = useState<{ mode: ToastMode; message: string } | null>(
-    null,
-  );
+  const [toast, setToast] = useState<{
+    mode: ToastMode;
+    message: string;
+  } | null>(null);
 
   const reload = async () => {
     setIsLoading(true);
@@ -78,7 +85,8 @@ export function ExchangeRatePanel({ showLedger = true }: ExchangeRatePanelProps)
     } catch (error) {
       setToast({
         mode: "error",
-        message: error instanceof Error ? error.message : "Error cargando la tasa",
+        message:
+          error instanceof Error ? error.message : "Error cargando la tasa",
       });
     } finally {
       setIsLoading(false);
@@ -107,7 +115,8 @@ export function ExchangeRatePanel({ showLedger = true }: ExchangeRatePanelProps)
     } catch (error) {
       setToast({
         mode: "error",
-        message: error instanceof Error ? error.message : "Error guardando la tasa",
+        message:
+          error instanceof Error ? error.message : "Error guardando la tasa",
       });
     } finally {
       setIsSubmitting(false);
@@ -135,7 +144,9 @@ export function ExchangeRatePanel({ showLedger = true }: ExchangeRatePanelProps)
       setToast({
         mode: "error",
         message:
-          error instanceof Error ? error.message : "Error guardando el diferencial",
+          error instanceof Error
+            ? error.message
+            : "Error guardando el diferencial",
       });
     } finally {
       setIsSubmitting(false);
@@ -163,7 +174,9 @@ export function ExchangeRatePanel({ showLedger = true }: ExchangeRatePanelProps)
       key: "base_rate",
       label: "Base",
       width: "18%",
-      render: (value: string) => <span className="font-mono">{fmt(value)}</span>,
+      render: (value: string) => (
+        <span className="font-mono">{fmt(value)}</span>
+      ),
     },
     {
       key: "delta",
@@ -174,7 +187,11 @@ export function ExchangeRatePanel({ showLedger = true }: ExchangeRatePanelProps)
         return (
           <span
             className={`font-mono ${
-              n > 0 ? "text-emerald-700" : n < 0 ? "text-red-600" : "text-gray-500"
+              n > 0
+                ? "text-emerald-700"
+                : n < 0
+                  ? "text-red-600"
+                  : "text-gray-500"
             }`}
           >
             {n > 0 ? "+" : ""}
@@ -248,58 +265,59 @@ export function ExchangeRatePanel({ showLedger = true }: ExchangeRatePanelProps)
         />
       </div>
 
-      {canEdit && (
+      {(isSuperuser || canEditDelta) && (
         <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-gray-300 bg-white p-6">
-            <h3 className="mb-1 text-base font-semibold text-gray-900">
-              Tasa base
-            </h3>
-            <p className="mb-4 text-sm text-gray-500">
-              La tasa del BCV. Es global: al cambiarla, aplica a todos los
-              tenants. Cada carga queda registrada en el historial.
-            </p>
-            <div className="flex items-end gap-3">
-              <Input
-                label="Bs. por USD"
-                type="number"
-                step="0.000001"
-                min="0"
-                value={baseInput}
-                onChange={(e) => setBaseInput(e.target.value)}
-              />
-              <Button onClick={handleSaveBase} loading={isSubmitting}>
-                <IconPlus />
-                Registrar
-              </Button>
+          {isSuperuser && (
+            <div className="rounded-2xl border border-gray-300 bg-white p-6">
+              <h3 className="mb-1 text-base font-semibold text-gray-900">
+                Tasa base
+              </h3>
+              <p className="mb-4 text-sm text-gray-500">
+                La tasa del BCV. Es global: al cambiarla, aplica a todos los
+                tenants. En producción se carga automáticamente; este campo es
+                para ambientes sin el job automático. Cada carga queda
+                registrada en el historial.
+              </p>
+              <div className="flex items-end gap-3">
+                <Input
+                  label="Bs. por USD"
+                  type="number"
+                  step="0.000001"
+                  min="0"
+                  value={baseInput}
+                  onChange={(e) => setBaseInput(e.target.value)}
+                />
+                <Button onClick={handleSaveBase} loading={isSubmitting}>
+                  <IconPlus />
+                  Registrar
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="rounded-2xl border border-gray-300 bg-white p-6">
-            <h3 className="mb-1 text-base font-semibold text-gray-900">
-              Diferencial
-            </h3>
-            <p className="mb-4 text-sm text-gray-500">
-              Monto que sumas o restas a la tasa base para este tenant. Si la
-              base es 850 y el diferencial +20, el sistema opera a 870.
-              Persiste hasta que lo cambies; 0 lo restablece.
-            </p>
-            <div className="flex items-end gap-3">
-              <Input
-                label="Diferencial en Bs. (+/-)"
-                type="number"
-                step="0.000001"
-                value={deltaInput}
-                onChange={(e) => setDeltaInput(e.target.value)}
-              />
-              <Button
-                variant="secondary"
-                onClick={handleSaveDelta}
-                loading={isSubmitting}
-              >
-                Aplicar
-              </Button>
+          {canEditDelta && (
+            <div className="rounded-2xl border border-gray-300 bg-white p-6">
+              <h3 className="mb-1 text-base font-semibold text-gray-900">
+                Diferencial
+              </h3>
+              <div className="flex items-end gap-3">
+                <Input
+                  label="Bs. (+/-)"
+                  type="number"
+                  step="0.000001"
+                  value={deltaInput}
+                  onChange={(e) => setDeltaInput(e.target.value)}
+                />
+                <Button
+                  variant="secondary"
+                  onClick={handleSaveDelta}
+                  loading={isSubmitting}
+                >
+                  Aplicar
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
