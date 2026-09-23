@@ -14,6 +14,9 @@ import type {
 
 export interface AccountsReceivablePageLoaderData {
   receivables: SaleAccountReceivable[];
+  total: number;
+  page: number;
+  limit: number;
   catalogs: ReceivableCatalogs;
   currentTenantId: string;
   currentTenantName: string;
@@ -39,10 +42,16 @@ export const getAccountsReceivablePageData =
       const currentTenantId = currentUser?.tenant?.tenant_id ?? "";
       const currentTenantName = currentUser?.tenant?.tenant_name ?? "Mi tenant";
 
-      const [receivables, catalogs, tenants] = await Promise.all([
-        accountsReceivableApi
-          .listReceivables()
-          .catch(() => [] as SaleAccountReceivable[]),
+      const [receivableList, catalogs, tenants] = await Promise.all([
+        accountsReceivableApi.listReceivables(1, 50).catch(
+          () =>
+            ({
+              receivables: [] as SaleAccountReceivable[],
+              total: 0,
+              page: 1,
+              limit: 50,
+            }),
+        ),
         accountsReceivableApi.getCatalogs().catch(
           () =>
             ({
@@ -57,7 +66,10 @@ export const getAccountsReceivablePageData =
       ]);
 
       return {
-        receivables,
+        receivables: receivableList.receivables,
+        total: receivableList.total,
+        page: receivableList.page,
+        limit: receivableList.limit,
         catalogs,
         currentTenantId,
         currentTenantName,

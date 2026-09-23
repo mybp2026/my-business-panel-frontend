@@ -321,11 +321,11 @@ export function InventoryPage() {
             },
             {
               key: "unit_price",
-              label: "Precio",
+              label: "Precio (USD)",
               width: "12%",
               render: (value: unknown) => (
                 <span className="font-mono text-gray-900">
-                  Bs.{" "}
+                  ${" "}
                   {Number(value || 0).toLocaleString("es-VE", {
                     minimumFractionDigits: 2,
                   })}

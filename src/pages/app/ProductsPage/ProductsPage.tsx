@@ -645,12 +645,12 @@ export function ProductsPage() {
             },
             {
               key: "cost_price" as keyof Product,
-              label: "Costo",
+              label: "Costo (USD)",
               width: "14%",
               render: (_: unknown, row: Product) => {
                 const cost = (row as ProductWithVariant).cost_price;
                 return cost != null ? (
-                  `Bs. ${Number(cost).toLocaleString("es-VE")}`
+                  `$ ${Number(cost).toLocaleString("es-VE", { minimumFractionDigits: 2 })}`
                 ) : (
                   <span className="text-gray-400 text-xs">—</span>
                 );
@@ -658,10 +658,10 @@ export function ProductsPage() {
             },
             {
               key: "price" as keyof Product,
-              label: "Precio venta",
+              label: "Precio venta (USD)",
               width: "14%",
               render: (_: unknown, row: Product) =>
-                `Bs. ${getProductPrice(row as ProductWithVariant).toLocaleString("es-VE")}`,
+                `$ ${getProductPrice(row as ProductWithVariant).toLocaleString("es-VE", { minimumFractionDigits: 2 })}`,
             },
             ...(isSuperAdmin
               ? [

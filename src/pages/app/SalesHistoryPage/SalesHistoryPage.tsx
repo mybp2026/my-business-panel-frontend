@@ -20,6 +20,7 @@ import type { Column } from "@/interfaces/components/ui/TableProps.interface";
 import type { ToastMode } from "@/interfaces/components/ui/ToastProps.interface";
 
 import { SaleDetailModal } from "./SaleDetailModal";
+import { CreditDebitNotesListSection } from "./CreditDebitNotesListSection";
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleString("es-CR", {
@@ -33,7 +34,7 @@ const formatCurrency = (value: number, symbol: string) =>
   })}`;
 
 export function SalesHistoryPage() {
-  const { branches, initialSales, initialBranchId } =
+  const { branches, initialSales, initialBranchId, creditDebitNotes } =
     useLoaderData() as SalesHistoryPageLoaderData;
   const { user } = useAuth();
 
@@ -281,6 +282,8 @@ export function SalesHistoryPage() {
           />
         )}
       </div>
+
+      <CreditDebitNotesListSection initialNotes={creditDebitNotes} />
 
       <SaleDetailModal
         isOpen={selected !== null}

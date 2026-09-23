@@ -1,10 +1,12 @@
 import { authApi } from "@/api/auth.api";
+import { exchangeRateApi } from "@/api/exchangeRate.api";
 import { productApi } from "@/api/product.api";
 import { purchaseApi } from "@/api/purchase.api";
 import { tenantApi } from "@/api/tenant.api";
 import { warehouseApi } from "@/api/warehouse.api";
 import { withAuthCheck } from "./utils/withAuthCheck";
 
+import type { ExchangeRate } from "@/interfaces/entities/ExchangeRate.interface";
 import type { Tenant } from "@/interfaces/entities/Tenant.interface";
 import type {
   PaymentAlert,
@@ -34,6 +36,8 @@ export interface PurchasesPageLoaderData {
   currentTenantName: string;
   isSuperuser: boolean;
   tenants: Tenant[];
+  /** Tasa vigente USD -> Bs.; el catálogo de productos está en USD. */
+  exchangeRate: ExchangeRate | null;
 }
 
 export interface AccountsPayablePageLoaderData {
@@ -84,6 +88,7 @@ export const getPurchasesPageData =
         productsResponse,
         catalogs,
         tenants,
+        exchangeRate,
       ] = await Promise.all([
         purchaseApi.listOrders().catch(() => [] as PurchaseOrder[]),
         currentTenantId
@@ -115,6 +120,7 @@ export const getPurchasesPageData =
         isSuperuser
           ? tenantApi.getAll(1, 200).then((response) => response.tenants ?? [])
           : Promise.resolve([] as Tenant[]),
+        exchangeRateApi.getLatest().catch(() => null),
       ]);
 
       return {
@@ -127,6 +133,7 @@ export const getPurchasesPageData =
         currentTenantName,
         isSuperuser,
         tenants,
+        exchangeRate,
       };
     });
 

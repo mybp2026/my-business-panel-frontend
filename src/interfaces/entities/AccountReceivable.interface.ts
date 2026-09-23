@@ -23,6 +23,13 @@ export interface SaleAccountReceivable {
   updated_at?: string;
 }
 
+export interface SaleAccountReceivableListResponse {
+  receivables: SaleAccountReceivable[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 export interface UpdatedSaleAccountReceivable {
   sale_account_receivable_id: string;
   sale_id: string;

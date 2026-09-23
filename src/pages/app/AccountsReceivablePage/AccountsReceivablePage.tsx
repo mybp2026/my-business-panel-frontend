@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
-import { Table } from "@/components/ui/Table";
+import { Pagination, Table } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
 
 import {
@@ -59,6 +59,9 @@ const emptyCollectionForm: CollectionFormState = {
 export function AccountsReceivablePage() {
   const {
     receivables: initialReceivables,
+    total: initialTotal,
+    page: initialPage,
+    limit,
     catalogs,
     currentTenantName,
     isSuperuser,
@@ -70,8 +73,12 @@ export function AccountsReceivablePage() {
 
   const [receivables, setReceivables] =
     useState<SaleAccountReceivable[]>(initialReceivables);
+  const [total, setTotal] = useState(initialTotal);
+  const [page, setPage] = useState(initialPage);
+  const [isLoadingPage, setIsLoadingPage] = useState(false);
   const [search, setSearch] = useState("");
   const [tenantFilter, setTenantFilter] = useState("all");
+  const totalPages = Math.max(1, Math.ceil(total / limit));
   const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
   const [selectedReceivable, setSelectedReceivable] =
     useState<SaleAccountReceivable | null>(null);
@@ -89,6 +96,27 @@ export function AccountsReceivablePage() {
     mode: ToastMode;
     message: string;
   } | null>(null);
+
+  const handlePageChange = async (nextPage: number) => {
+    if (nextPage < 1 || nextPage > totalPages || isLoadingPage) return;
+    setIsLoadingPage(true);
+    try {
+      const response = await accountsReceivableApi.listReceivables(
+        nextPage,
+        limit,
+      );
+      setReceivables(response.receivables);
+      setTotal(response.total);
+      setPage(response.page);
+    } catch {
+      setToast({
+        mode: "error",
+        message: "No se pudo cargar la página solicitada",
+      });
+    } finally {
+      setIsLoadingPage(false);
+    }
+  };
 
   const filteredReceivables = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -392,11 +420,14 @@ export function AccountsReceivablePage() {
           </div>
 
           <span className="text-sm text-gray-500">
-            {filteredReceivables.length} cuenta
-            {filteredReceivables.length === 1 ? "" : "s"} visible
-            {filteredReceivables.length === 1 ? "" : "s"}
+            {filteredReceivables.length} de {total} cuenta
+            {total === 1 ? "" : "s"} (página {page} de {totalPages})
           </span>
         </div>
+        <p className="mt-2 text-xs text-gray-400">
+          La búsqueda y el filtro de tenant aplican solo sobre la página
+          cargada. Cambie de página para revisar otros registros.
+        </p>
       </section>
 
       <section className="rounded-3xl border border-gray-200 bg-white p-6">
@@ -484,6 +515,12 @@ export function AccountsReceivablePage() {
           data={filteredReceivables}
           emptyMessage="No hay cuentas por cobrar para mostrar"
           onRowClick={(row) => openDetail(row as SaleAccountReceivable)}
+        />
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+          loading={isLoadingPage}
         />
       </section>
 

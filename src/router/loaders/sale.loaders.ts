@@ -1,5 +1,6 @@
 import { authApi } from "@/api/auth.api";
 import { branchApi } from "@/api/branch.api";
+import { creditDebitNoteApi } from "@/api/creditDebitNote.api";
 import { customerApi } from "@/api/customer.api";
 import { employeeApi } from "@/api/employee.api";
 import { productApi } from "@/api/product.api";
@@ -9,6 +10,7 @@ import { withAuthCheck } from "./utils/withAuthCheck";
 import type { Branch } from "@/interfaces/entities/Branch.interface";
 import type { Product } from "@/interfaces/entities/Product.interface";
 import type { Customer } from "@/interfaces/entities/Customer.interface";
+import type { CreditDebitNoteListItem } from "@/interfaces/entities/CreditDebitNote.interface";
 import type { CurrentUserResponse } from "@/interfaces/api/responses/CurrentUserResponse.interface";
 import type { PaginatedResponse } from "@/interfaces/api/responses/PaginatedResponse.interface";
 import type {
@@ -83,6 +85,7 @@ export interface SalesHistoryPageLoaderData {
   branches: Branch[];
   initialSales: PaginatedResponse<SaleListItem>;
   initialBranchId: string;
+  creditDebitNotes: CreditDebitNoteListItem[];
 }
 
 export const getSalesHistoryPageData =
@@ -133,7 +136,17 @@ export const getSalesHistoryPageData =
             limit: SALES_PAGE_LIMIT,
           } as PaginatedResponse<SaleListItem>);
 
-      return { currentUser, branches, initialSales, initialBranchId };
+      const creditDebitNotes = await creditDebitNoteApi
+        .listByTenant()
+        .catch(() => [] as CreditDebitNoteListItem[]);
+
+      return {
+        currentUser,
+        branches,
+        initialSales,
+        initialBranchId,
+        creditDebitNotes,
+      };
     });
 
 export const getSalesByBranch = async (

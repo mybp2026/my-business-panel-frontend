@@ -241,6 +241,12 @@ export function ProductUpsertModal({
 
   const onSubmit = async (data: ProductUpsertFormData) => {
     setSaveError(null);
+    if (groupIds.length === 0) {
+      setSaveError(
+        "Asigna al menos una familia o dimensión antes de guardar el producto.",
+      );
+      return;
+    }
     const price = parseFloat(data.price);
     const costPrice =
       data.cost_price && data.cost_price !== ""
@@ -431,21 +437,22 @@ export function ProductUpsertModal({
               {...register("sku")}
             />
             <Input
-              label="Costo unitario"
+              label="Costo unitario (USD)"
               type="number"
-              placeholder="Ej: 12000.00"
+              placeholder="Ej: 12.00"
               step="0.01"
               min="0"
-              hint="Costo de adquisición. Se actualiza al recibir compras."
+              hint="En dólares (moneda base del catálogo). Se actualiza al recibir compras."
               error={errors.cost_price?.message}
               {...register("cost_price")}
             />
             <Input
-              label="Precio Unitario"
+              label="Precio Unitario (USD)"
               type="number"
-              placeholder="Ej: 25000.00"
+              placeholder="Ej: 25.00"
               step="0.01"
               min="0"
+              hint="En dólares. Se convierte a Bs. con la tasa vigente al vender."
               error={errors.price?.message}
               required
               {...register("price")}
@@ -542,11 +549,13 @@ export function ProductUpsertModal({
         <section className="space-y-2">
           <header>
             <h3 className="text-sm font-semibold text-gray-900">
-              Familias y dimensiones del tenant
+              Familias y dimensiones del tenant{" "}
+              <span className="text-red-600">*</span>
             </h3>
             <p className="text-xs text-gray-500">
               Asigna el producto a Departamento, Familia, Marca, etc. para
-              filtrado y promociones.
+              filtrado y promociones. Obligatorio: no se puede guardar un
+              producto sin al menos una clasificación.
             </p>
           </header>
           {targetTenantId ? (
