@@ -6,6 +6,17 @@ import type { UpdateProductRequest } from "@/interfaces/api/requests/UpdateProdu
 import type { Product } from "@/interfaces/entities/Product.interface";
 import type { ProductsListResponse } from "@/interfaces/api/responses/ProductsListResponse.interface";
 
+const json = async <T>(res: Response, fallback: string): Promise<T> => {
+  const body = await res.json();
+  if (!res.ok) {
+    const msg = Array.isArray(body?.message)
+      ? body.message.join(", ")
+      : (body?.message ?? body?.error ?? fallback);
+    throw new Error(msg);
+  }
+  return (body as ApiResponse<T>).data;
+};
+
 export interface BulkProductInput {
   tenant_id: string;
   sku: string;
@@ -91,23 +102,15 @@ export const productApi = {
   },
 
   async listAll(page = 1, limit = 100): Promise<ProductsListResponse> {
-    try {
-      const response = await fetch(
-        `${url}/product/all?page=${page}&limit=${limit}`,
-        {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-        },
-      );
-
-      const json: ApiResponse<ProductsListResponse> = await response.json();
-      return json.data;
-    } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : "Error al listar productos",
-      );
-    }
+    const response = await fetch(
+      `${url}/product/all?page=${page}&limit=${limit}`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      },
+    );
+    return json<ProductsListResponse>(response, "Error al listar productos");
   },
 
   async listByTenant(
@@ -115,42 +118,27 @@ export const productApi = {
     page = 1,
     limit = 100,
   ): Promise<ProductsListResponse> {
-    try {
-      const response = await fetch(
-        `${url}/product/${tenantId}?page=${page}&limit=${limit}`,
-        {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-        },
-      );
-
-      const json: ApiResponse<ProductsListResponse> = await response.json();
-      return json.data;
-    } catch (error) {
-      throw new Error(
-        error instanceof Error
-          ? error.message
-          : "Error al listar productos del tenant",
-      );
-    }
-  },
-
-  async getById(productId: string): Promise<Product> {
-    try {
-      const response = await fetch(`${url}/product/${productId}`, {
+    const response = await fetch(
+      `${url}/product/${tenantId}?page=${page}&limit=${limit}`,
+      {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-      });
+      },
+    );
+    return json<ProductsListResponse>(
+      response,
+      "Error al listar productos del tenant",
+    );
+  },
 
-      const json: ApiResponse<Product> = await response.json();
-      return json.data;
-    } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : "Error al obtener producto",
-      );
-    }
+  async getById(productId: string): Promise<Product> {
+    const response = await fetch(`${url}/product/${productId}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+    return json<Product>(response, "Error al obtener producto");
   },
 
   async getBySku(sku: string): Promise<Product | null> {
@@ -213,38 +201,22 @@ export const productApi = {
     productId: string,
     data: UpdateProductRequest,
   ): Promise<Product> {
-    try {
-      const response = await fetch(`${url}/product/${productId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(data),
-      });
-
-      const json: ApiResponse<Product> = await response.json();
-      return json.data;
-    } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : "Error al actualizar producto",
-      );
-    }
+    const response = await fetch(`${url}/product/${productId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+    return json<Product>(response, "Error al actualizar producto");
   },
 
   async delete(productId: string): Promise<{ message: string }> {
-    try {
-      const response = await fetch(`${url}/product/${productId}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
-
-      const json: ApiResponse<{ message: string }> = await response.json();
-      return json.data;
-    } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : "Error al eliminar producto",
-      );
-    }
+    const response = await fetch(`${url}/product/${productId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+    return json<{ message: string }>(response, "Error al eliminar producto");
   },
 
   async search(
@@ -256,34 +228,26 @@ export const productApi = {
     attributeValueIds?: string[],
     noSupplier?: boolean,
   ): Promise<ProductsListResponse> {
-    try {
-      const params = new URLSearchParams({
-        q: query,
-        page: String(page),
-        limit: String(limit),
-      });
-      if (groupIds && groupIds.length > 0)
-        params.set("group_ids", groupIds.join(","));
-      if (attributeValueIds && attributeValueIds.length > 0)
-        params.set("attribute_value_ids", attributeValueIds.join(","));
-      if (noSupplier) params.set("no_supplier", "true");
+    const params = new URLSearchParams({
+      q: query,
+      page: String(page),
+      limit: String(limit),
+    });
+    if (groupIds && groupIds.length > 0)
+      params.set("group_ids", groupIds.join(","));
+    if (attributeValueIds && attributeValueIds.length > 0)
+      params.set("attribute_value_ids", attributeValueIds.join(","));
+    if (noSupplier) params.set("no_supplier", "true");
 
-      const response = await fetch(
-        `${url}/product/${tenantId}/search?${params.toString()}`,
-        {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-        },
-      );
-
-      const json: ApiResponse<ProductsListResponse> = await response.json();
-      return json.data;
-    } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : "Error al buscar productos",
-      );
-    }
+    const response = await fetch(
+      `${url}/product/${tenantId}/search?${params.toString()}`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      },
+    );
+    return json<ProductsListResponse>(response, "Error al buscar productos");
   },
 
   async filterByCategory(
@@ -292,25 +256,18 @@ export const productApi = {
     page = 1,
     limit = 100,
   ): Promise<ProductsListResponse> {
-    try {
-      const response = await fetch(
-        `${url}/product/${tenantId}?category_id=${categoryId}&page=${page}&limit=${limit}`,
-        {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-        },
-      );
-
-      const json: ApiResponse<ProductsListResponse> = await response.json();
-      return json.data;
-    } catch (error) {
-      throw new Error(
-        error instanceof Error
-          ? error.message
-          : "Error al filtrar productos por categoría",
-      );
-    }
+    const response = await fetch(
+      `${url}/product/${tenantId}?category_id=${categoryId}&page=${page}&limit=${limit}`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      },
+    );
+    return json<ProductsListResponse>(
+      response,
+      "Error al filtrar productos por categoría",
+    );
   },
 
   async getComposition(
