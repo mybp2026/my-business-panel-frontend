@@ -75,7 +75,7 @@ export function ProductVariantComboBox({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Custom hook for search logic
-  const { variants, isLoading, search, getStockForVariant } =
+  const { variants, isLoading, error: searchError, search, getStockForVariant } =
     useProductVariantSearch({
       tenantId,
       warehouseId,
@@ -291,7 +291,13 @@ export function ProductVariantComboBox({
               </li>
             )}
 
-            {!isLoading && variants.length === 0 && (
+            {!isLoading && searchError && (
+              <li className="px-4 py-4 text-center text-sm text-red-600">
+                {searchError}
+              </li>
+            )}
+
+            {!isLoading && !searchError && variants.length === 0 && (
               <li className="px-4 py-4 text-center text-sm text-gray-500">
                 {searchTerm.trim()
                   ? `Sin resultados para "${searchTerm.trim()}"`
@@ -300,6 +306,7 @@ export function ProductVariantComboBox({
             )}
 
             {!isLoading &&
+              !searchError &&
               variants
                 .filter((v) => {
                   if (!hideOutOfStock || !warehouseId) return true;
