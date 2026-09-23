@@ -18,6 +18,7 @@ import type { ToastMode } from "@/interfaces/components/ui/ToastProps.interface"
 import type { HrPayrollParameter } from "@/interfaces/entities/Hr.interface";
 
 import { ConceptsSection } from "./ConceptsSection";
+import { ExchangeRatePanel } from "@/components/exchange-rate/ExchangeRatePanel";
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
@@ -140,7 +141,9 @@ export function HRParametersPage() {
     source: "",
   });
 
-  const [activeTab, setActiveTab] = useState<"legal" | "concepts">("legal");
+  const [activeTab, setActiveTab] = useState<"legal" | "concepts" | "fx">(
+    "legal",
+  );
 
   const paramOptions = useMemo(
     () =>
@@ -295,13 +298,28 @@ export function HRParametersPage() {
           tabs={[
             { id: "legal", label: "Parámetros legales" },
             { id: "concepts", label: "Conceptos de nómina" },
+            { id: "fx", label: "Tasa de cambio" },
           ]}
           activeId={activeTab}
-          onChange={(id) => setActiveTab(id as "legal" | "concepts")}
+          onChange={(id) => setActiveTab(id as "legal" | "concepts" | "fx")}
         />
       </div>
 
       {activeTab === "concepts" && <ConceptsSection />}
+
+      {activeTab === "fx" && (
+        <>
+          <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+            La misma tasa que rige ventas, compras y gastos — no es una copia
+            aparte para nómina. Cambiarla aquí la cambia en todo el sistema.
+            No confundir con <strong>Tasa activa BCV</strong> ni{" "}
+            <strong>Tasa promedio activa/pasiva BCV</strong> de la pestaña de
+            parámetros legales: esas son tasas de <em>interés</em> (mora,
+            Arts. 128 y 143), no de conversión de moneda.
+          </div>
+          <ExchangeRatePanel />
+        </>
+      )}
 
       {activeTab === "legal" && missing.length > 0 && (
         <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">

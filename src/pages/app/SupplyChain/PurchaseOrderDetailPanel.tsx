@@ -23,8 +23,8 @@ import {
 import { exchangeRateApi } from "@/api/exchangeRate.api";
 import { currencies } from "@/constants/payment-methods";
 
-const CRC_CURRENCY_ID = 1;
-const USD_CURRENCY_ID = 2;
+// Moneda base del sistema (Venezuela). Antes VES_CURRENCY_ID, mismo id.
+const VES_CURRENCY_ID = 1;
 
 interface PurchaseOrderDetailPanelProps {
   order: PurchaseOrderDetail;
@@ -109,7 +109,7 @@ export function PurchaseOrderDetailPanel({
     amount_paid: balanceDue > 0 ? String(balanceDue) : "",
     payment_method_id: defaultMethodId,
     payment_reference: "",
-    currency_id: CRC_CURRENCY_ID,
+    currency_id: VES_CURRENCY_ID,
     exchange_rate_override: "",
   }));
 
@@ -123,7 +123,7 @@ export function PurchaseOrderDetailPanel({
 
   const amount = Number(quickPaymentForm.amount_paid) || 0;
   const convertedAmount = useMemo(() => {
-    if (quickPaymentForm.currency_id === CRC_CURRENCY_ID) {
+    if (quickPaymentForm.currency_id === VES_CURRENCY_ID) {
       if (effectiveExchangeRate <= 0) return null;
       return round2(amount / effectiveExchangeRate);
     } else {
@@ -134,9 +134,12 @@ export function PurchaseOrderDetailPanel({
 
   useEffect(() => {
     let cancelled = false;
-    if (quickPaymentForm.currency_id === CRC_CURRENCY_ID) {
+    // Una sola tasa en el sistema: USD -> VES. La direccion inversa es su
+    // reciproco, no una fila aparte.
+    const toVes = quickPaymentForm.currency_id === VES_CURRENCY_ID;
+    if (toVes) {
       exchangeRateApi
-        .getLatest(USD_CURRENCY_ID, CRC_CURRENCY_ID)
+        .getLatest()
         .then((rate) => {
           if (!cancelled) setExchangeRate(rate ? Number(rate.rate) : null);
         })
@@ -145,9 +148,10 @@ export function PurchaseOrderDetailPanel({
         });
     } else {
       exchangeRateApi
-        .getLatest(CRC_CURRENCY_ID, USD_CURRENCY_ID)
+        .getLatest()
         .then((rate) => {
-          if (!cancelled) setExchangeRate(rate ? Number(rate.rate) : null);
+          const r = rate ? Number(rate.rate) : 0;
+          if (!cancelled) setExchangeRate(r > 0 ? 1 / r : null);
         })
         .catch(() => {
           if (!cancelled) setExchangeRate(null);
@@ -164,7 +168,7 @@ export function PurchaseOrderDetailPanel({
       amount_paid: balanceDue > 0 ? String(balanceDue) : "",
       payment_method_id: defaultMethodId,
       payment_reference: "",
-      currency_id: CRC_CURRENCY_ID,
+      currency_id: VES_CURRENCY_ID,
       exchange_rate_override: "",
     });
     setShowQuickPayment(true);
@@ -621,7 +625,7 @@ export function PurchaseOrderDetailPanel({
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,
                               })}{" "}
-                              {quickPaymentForm.currency_id === CRC_CURRENCY_ID
+                              {quickPaymentForm.currency_id === VES_CURRENCY_ID
                                 ? "$"
                                 : "Bs."}
                             </span>

@@ -117,7 +117,9 @@ interface PaymentSplit {
 
 const TAX_RATE = 0.13;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const CRC_CURRENCY_ID = 1;
+// Moneda base del sistema (Venezuela). Antes se llamaba VES_CURRENCY_ID
+// por el legado de Costa Rica, apuntando al mismo id.
+const VES_CURRENCY_ID = 1;
 
 const formatAmount = (value: number, symbol: string) =>
   `${symbol} ${value.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`;
@@ -464,7 +466,7 @@ export function CreateSalePage() {
 
   const convertCrcToSaleCurrency = useCallback(
     (amount: number) => {
-      if (currencyId === CRC_CURRENCY_ID) return round2(amount);
+      if (currencyId === VES_CURRENCY_ID) return round2(amount);
       if (effectiveExchangeRate <= 0) return round2(amount);
       return round2(amount / effectiveExchangeRate);
     },
@@ -473,7 +475,7 @@ export function CreateSalePage() {
 
   const convertSaleCurrencyToCrc = useCallback(
     (amount: number) => {
-      if (currencyId === CRC_CURRENCY_ID) return round2(amount);
+      if (currencyId === VES_CURRENCY_ID) return round2(amount);
       if (effectiveExchangeRate <= 0) return null;
       return round2(amount * effectiveExchangeRate);
     },
@@ -509,7 +511,7 @@ export function CreateSalePage() {
   // for CRC sales this just equals the total. For other currencies we leave
   // it null since we don't have a rate.
   const totalInColones = useMemo(() => {
-    if (currencyId === CRC_CURRENCY_ID) return totalAmount;
+    if (currencyId === VES_CURRENCY_ID) return totalAmount;
     return convertSaleCurrencyToCrc(totalAmountDisplay);
   }, [convertSaleCurrencyToCrc, currencyId, totalAmount, totalAmountDisplay]);
 
@@ -610,14 +612,14 @@ export function CreateSalePage() {
   // Load latest exchange rate (USD -> CRC). Failing silently is fine — the
   // panel just shows "no hay tasa registrada" and the cashier can type one.
   useEffect(() => {
-    if (currencyId === CRC_CURRENCY_ID) {
+    if (currencyId === VES_CURRENCY_ID) {
       setServerExchangeRate(null);
       return;
     }
 
     let cancelled = false;
     exchangeRateApi
-      .getLatest(currencyId, CRC_CURRENCY_ID)
+      .getLatest()
       .then((rate) => {
         if (!cancelled) setServerExchangeRate(rate ?? null);
       })
@@ -636,14 +638,11 @@ export function CreateSalePage() {
     const loadRatesForSplits = async () => {
       const rates: Record<string, ExchangeRate | null> = {};
       for (const split of paymentSplits) {
-        if (split.currencyId === CRC_CURRENCY_ID) {
+        if (split.currencyId === VES_CURRENCY_ID) {
           rates[split.id] = null; // CRC doesn't need conversion to itself
         } else {
           try {
-            const rate = await exchangeRateApi.getLatest(
-              split.currencyId,
-              CRC_CURRENCY_ID,
-            );
+            const rate = await exchangeRateApi.getLatest();
             rates[split.id] = rate ?? null;
           } catch {
             rates[split.id] = null;
@@ -723,14 +722,14 @@ export function CreateSalePage() {
 
       // Convert split to CRC first
       let amountInCrc = amount;
-      if (s.currencyId !== CRC_CURRENCY_ID) {
+      if (s.currencyId !== VES_CURRENCY_ID) {
         const rateToCrc = exchangeRatesForSplits[s.id];
         if (!rateToCrc) return sum; // No rate available, skip this split
         amountInCrc = round2(amount * Number(rateToCrc.rate));
       }
 
       // Now convert from CRC to sale currency if needed
-      if (currencyId === CRC_CURRENCY_ID) {
+      if (currencyId === VES_CURRENCY_ID) {
         return round2(sum + amountInCrc);
       }
 
@@ -820,7 +819,7 @@ export function CreateSalePage() {
             id: `split-${m.value}`,
             methodId: m.value,
             amount: "",
-            currencyId: CRC_CURRENCY_ID,
+            currencyId: VES_CURRENCY_ID,
           })),
       );
       return;
@@ -1976,7 +1975,7 @@ export function CreateSalePage() {
             <p className="text-2xl font-bold text-gray-900 mt-1">
               {formatAmount(grossSubtotalDisplay, currencySymbol)}
             </p>
-            {currencyId === CRC_CURRENCY_ID && totalInDollars !== null && (
+            {currencyId === VES_CURRENCY_ID && totalInDollars !== null && (
               <p className="text-xs text-gray-500 mt-1">
                 ≈{" "}
                 {formatAmount(
@@ -2007,7 +2006,7 @@ export function CreateSalePage() {
             >
               -{formatAmount(discountAmountDisplay, currencySymbol)}
             </p>
-            {currencyId === CRC_CURRENCY_ID && totalInDollars !== null && (
+            {currencyId === VES_CURRENCY_ID && totalInDollars !== null && (
               <p className="text-xs text-amber-700 mt-1">
                 ≈ -
                 {formatAmount(
@@ -2024,7 +2023,7 @@ export function CreateSalePage() {
             <p className="text-2xl font-bold text-gray-900 mt-1">
               {formatAmount(subtotalDisplay, currencySymbol)}
             </p>
-            {currencyId === CRC_CURRENCY_ID && totalInDollars !== null && (
+            {currencyId === VES_CURRENCY_ID && totalInDollars !== null && (
               <p className="text-xs text-gray-500 mt-1">
                 ≈ {formatAmount(round2(subtotal / effectiveExchangeRate), "$")}
               </p>
@@ -2037,12 +2036,12 @@ export function CreateSalePage() {
             <p className="text-2xl font-bold text-emerald-900 mt-1">
               {formatAmount(totalAmountDisplay, currencySymbol)}
             </p>
-            {currencyId === CRC_CURRENCY_ID && totalInDollars !== null && (
+            {currencyId === VES_CURRENCY_ID && totalInDollars !== null && (
               <p className="text-xs text-emerald-700 mt-1">
                 ≈ {formatAmount(totalInDollars, "$")}
               </p>
             )}
-            {currencyId !== CRC_CURRENCY_ID && totalInColones !== null && (
+            {currencyId !== VES_CURRENCY_ID && totalInColones !== null && (
               <p className="text-xs text-emerald-700 mt-1">
                 ≈ {formatAmount(totalInColones, "Bs.")} ·
                 <span className="ml-1 text-emerald-600">
@@ -2054,7 +2053,7 @@ export function CreateSalePage() {
                 </span>
               </p>
             )}
-            {currencyId !== CRC_CURRENCY_ID &&
+            {currencyId !== VES_CURRENCY_ID &&
               totalInColones === null &&
               effectiveExchangeRate === 0 && (
                 <p className="text-xs text-amber-700 mt-1">
@@ -2150,7 +2149,7 @@ export function CreateSalePage() {
                               id: "split-1",
                               methodId: 5, // Loyalty points method
                               amount: String(amountInCurrency),
-                              currencyId: CRC_CURRENCY_ID,
+                              currencyId: VES_CURRENCY_ID,
                             },
                           ]);
 
@@ -2424,7 +2423,7 @@ export function CreateSalePage() {
                           return `${pointsValue.toLocaleString("es-CR")} puntos`;
                         })()}
                       </div>
-                    ) : split.currencyId !== CRC_CURRENCY_ID &&
+                    ) : split.currencyId !== VES_CURRENCY_ID &&
                       split.amount &&
                       Number(split.methodId) !== 5 ? (
                       <div className="mt-1.5 text-xs text-gray-500">
