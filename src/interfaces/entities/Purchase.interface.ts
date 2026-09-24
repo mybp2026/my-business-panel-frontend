@@ -275,3 +275,22 @@ export interface PurchaseDispute {
   resolved_at?: string | null;
   updated_at?: string;
 }
+
+export type SupplierCreditStatus = "AVAILABLE" | "APPLIED" | "VOIDED";
+
+/**
+ * Saldo a favor del tenant frente a un proveedor, originado por una nota de
+ * credito de venta por mercancia danada. Aplicable contra el balance de una
+ * cuenta por pagar de compras de ese mismo proveedor.
+ */
+export interface SupplierCredit {
+  supplier_credit_id: string;
+  tenant_id: string;
+  supplier_id: string;
+  source_note_id: string;
+  original_amount: NumericLike;
+  remaining_amount: NumericLike;
+  status: SupplierCreditStatus;
+  created_at?: string;
+  updated_at?: string;
+}
