@@ -1,4 +1,5 @@
 import { Input } from "@/components/ui/Input";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
 
 import { formatAmount } from "../../create-sale.constants";
 import type { CreditApartadoSectionProps } from "./CreditApartadoSectionProps";
@@ -14,6 +15,7 @@ export function CreditApartadoSection({
   totalAmountDisplay,
   apartadoAmountDisplay,
   apartadoBalance,
+  effectiveExchangeRate,
 }: CreditApartadoSectionProps) {
   if (step !== "items" || (!isCredit && !isApartado)) return null;
 
@@ -42,11 +44,15 @@ export function CreditApartadoSection({
           required
         />
         {paymentBalance > 0.01 && (
-          <p className="mt-3 text-sm text-blue-700">
-            Saldo pendiente{" "}
-            <strong>{formatAmount(paymentBalance, currencySymbol)}</strong> se
-            registrará en cuentas por cobrar.
-          </p>
+          <div className="mt-3 text-sm text-blue-700">
+            Saldo pendiente que se registrará en cuentas por cobrar:
+            <DualCurrencyAmount
+              amountBs={paymentBalance}
+              rate={effectiveExchangeRate}
+              bold
+              className="mt-1"
+            />
+          </div>
         )}
       </div>
     );
@@ -80,10 +86,14 @@ export function CreditApartadoSection({
         <p className="text-xs uppercase tracking-wider text-amber-700">
           Saldo pendiente
         </p>
-        <p className="text-2xl font-bold text-amber-900 mt-1">
-          {formatAmount(Math.max(apartadoBalance, 0), currencySymbol)}
-        </p>
-        <p className="text-xs text-amber-700 mt-1">
+        <div className="mt-1">
+          <DualCurrencyAmount
+            amountBs={Math.max(apartadoBalance, 0)}
+            rate={effectiveExchangeRate}
+            bold
+          />
+        </div>
+        <p className="text-xs text-amber-700 mt-2">
           Total: {formatAmount(totalAmountDisplay, currencySymbol)} · Abono
           ingresado: {formatAmount(apartadoAmountDisplay, currencySymbol)}
         </p>

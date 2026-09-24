@@ -2,9 +2,12 @@ import { url } from ".";
 
 import type { ApiResponse } from "@/interfaces/api/ApiResponse.interface";
 import type {
+  CreatePurchaseDisputeRequest,
   CreatePurchaseOrderRequest,
   CreatePurchasePaymentRequest,
   CreateSupplierRequest,
+  ResolvePurchaseDisputeRequest,
+  UpdateSupplierInvoiceRequest,
   UpdateSupplierRequest,
   UpsertPaymentAlertConfigRequest,
 } from "@/interfaces/api/requests/PurchaseModuleRequests.interface";
@@ -15,6 +18,7 @@ import type {
   PaymentAlertStats,
   PurchaseAccountPayable,
   PurchaseCatalogs,
+  PurchaseDispute,
   PurchaseMatching,
   PurchaseOrder,
   PurchaseOrderDetail,
@@ -146,6 +150,58 @@ export const purchaseApi = {
       res,
       "Error al actualizar el estado de la orden",
     );
+  },
+
+  async updateSupplierInvoice(
+    invoiceId: string,
+    data: UpdateSupplierInvoiceRequest,
+  ): Promise<PurchaseOrderDetail> {
+    const res = await fetch(`${url}/purchase/invoices/${invoiceId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    return json<PurchaseOrderDetail>(res, "Error al actualizar la factura");
+  },
+
+  async createDispute(data: CreatePurchaseDisputeRequest): Promise<PurchaseDispute> {
+    const res = await fetch(`${url}/purchase/disputes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    return json<PurchaseDispute>(res, "Error al reportar la discrepancia");
+  },
+
+  async listDisputesByOrder(purchaseOrderId: string): Promise<PurchaseDispute[]> {
+    const res = await fetch(
+      withQuery(`${url}/purchase/disputes`, { purchase_order_id: purchaseOrderId }),
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      },
+    );
+
+    return json<PurchaseDispute[]>(res, "Error al listar discrepancias");
+  },
+
+  async resolveDispute(
+    disputeId: string,
+    data: ResolvePurchaseDisputeRequest,
+  ): Promise<PurchaseDispute> {
+    const res = await fetch(`${url}/purchase/disputes/${disputeId}/resolve`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    return json<PurchaseDispute>(res, "Error al resolver la discrepancia");
   },
 
   async getMatching(orderId: string): Promise<PurchaseMatching> {

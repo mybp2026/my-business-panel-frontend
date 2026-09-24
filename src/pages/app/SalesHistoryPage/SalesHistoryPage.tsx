@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Table, Pagination } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
+
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
 
 import {
   SALES_PAGE_LIMIT,
@@ -29,15 +32,11 @@ const formatDate = (value: string) =>
     timeStyle: "short",
   });
 
-const formatCurrency = (value: number, symbol: string) =>
-  `${symbol} ${Number(value ?? 0).toLocaleString("es-CR", {
-    minimumFractionDigits: 2,
-  })}`;
-
 export function SalesHistoryPage() {
   const { branches, initialSales, initialBranchId, creditDebitNotes } =
     useLoaderData() as SalesHistoryPageLoaderData;
   const { user } = useAuth();
+  const exchangeRate = useCurrentExchangeRate();
 
   const roleId = user?.role.role_id ?? 1;
   const canView = roleId === 2 || roleId === 3;
@@ -199,17 +198,16 @@ export function SalesHistoryPage() {
       key: "subtotal_amount",
       label: "Subtotal",
       width: "12%",
-      render: (v: number, row: SaleListItem) =>
-        formatCurrency(v, row.symbol ?? ""),
+      render: (v: number) => (
+        <DualCurrencyAmount amountBs={v} rate={exchangeRate} />
+      ),
     },
     {
       key: "total_amount",
       label: "Total",
       width: "12%",
-      render: (v: number, row: SaleListItem) => (
-        <span className="font-semibold">
-          {formatCurrency(v, row.symbol ?? "")}
-        </span>
+      render: (v: number) => (
+        <DualCurrencyAmount amountBs={v} rate={exchangeRate} bold />
       ),
     },
     {

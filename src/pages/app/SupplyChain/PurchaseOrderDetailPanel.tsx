@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/Select";
 
 import type {
   PaymentMethodCatalog,
+  PurchaseDispute,
   PurchaseMatching,
   PurchaseOrderDetail,
 } from "@/interfaces/entities/Purchase.interface";
@@ -22,9 +23,18 @@ import {
 } from "@/utils/purchase";
 import { exchangeRateApi } from "@/api/exchangeRate.api";
 import { currencies } from "@/constants/payment-methods";
+import { purchaseApi } from "@/api/purchase.api";
 
 // Moneda base del sistema (Venezuela). Antes VES_CURRENCY_ID, mismo id.
 const VES_CURRENCY_ID = 1;
+
+// Estado de orden que habilita edicion de factura ("enviada" / Shipped).
+const INVOICE_EDITABLE_ORDER_STATUS_ID = 2;
+
+const disputeTypeLabels: Record<string, string> = {
+  MISSING_GOODS: "Mercancía incompleta",
+  PRICE_MISMATCH: "Precio distinto al pactado",
+};
 
 interface PurchaseOrderDetailPanelProps {
   order: PurchaseOrderDetail;
@@ -76,6 +86,132 @@ export function PurchaseOrderDetailPanel({
   const [isEditingPaymentSubmitting, setIsEditingPaymentSubmitting] =
     useState(false);
   const [editPaymentError, setEditPaymentError] = useState<string | null>(null);
+
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(
+    null,
+  );
+  const [invoiceEditItems, setInvoiceEditItems] = useState<
+    Array<{ product_variant_id: string; label: string; quantity_billed: string; unit_price: string }>
+  >([]);
+  const [isInvoiceEditSubmitting, setIsInvoiceEditSubmitting] =
+    useState(false);
+  const [invoiceEditError, setInvoiceEditError] = useState<string | null>(
+    null,
+  );
+
+  const [disputes, setDisputes] = useState<PurchaseDispute[]>([]);
+  const [showDisputeForm, setShowDisputeForm] = useState(false);
+  const [disputeForm, setDisputeForm] = useState<{
+    dispute_type: "MISSING_GOODS" | "PRICE_MISMATCH";
+    description: string;
+  }>({ dispute_type: "MISSING_GOODS", description: "" });
+  const [isDisputeSubmitting, setIsDisputeSubmitting] = useState(false);
+  const [disputeError, setDisputeError] = useState<string | null>(null);
+  const [resolvingDisputeId, setResolvingDisputeId] = useState<string | null>(
+    null,
+  );
+  const [resolutionNotes, setResolutionNotes] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    purchaseApi
+      .listDisputesByOrder(order.purchase_order_id)
+      .then((rows) => {
+        if (!cancelled) setDisputes(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setDisputes([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [order.purchase_order_id]);
+
+  const isInvoiceEditable =
+    order.purchase_order_status_id === INVOICE_EDITABLE_ORDER_STATUS_ID;
+
+  const openInvoiceEdit = (invoiceId: string) => {
+    setInvoiceEditError(null);
+    setInvoiceEditItems(
+      order.items.map((item) => ({
+        product_variant_id: item.product_variant_id,
+        label: item.variant_name ?? item.product_variant_id,
+        quantity_billed: String(item.quantity_ordered),
+        unit_price: String(item.unit_price),
+      })),
+    );
+    setEditingInvoiceId(invoiceId);
+  };
+
+  const submitInvoiceEdit = async () => {
+    if (!editingInvoiceId) return;
+
+    const items = invoiceEditItems.map((item) => ({
+      product_variant_id: item.product_variant_id,
+      quantity_billed: Number(item.quantity_billed),
+      unit_price: Number(item.unit_price),
+    }));
+
+    if (items.some((i) => !i.quantity_billed || !i.unit_price)) {
+      setInvoiceEditError("Cantidad y costo unitario deben ser mayores a 0");
+      return;
+    }
+
+    setIsInvoiceEditSubmitting(true);
+    setInvoiceEditError(null);
+    try {
+      await purchaseApi.updateSupplierInvoice(editingInvoiceId, { items });
+      setEditingInvoiceId(null);
+    } catch (err) {
+      setInvoiceEditError(
+        err instanceof Error ? err.message : "Error al actualizar la factura",
+      );
+    } finally {
+      setIsInvoiceEditSubmitting(false);
+    }
+  };
+
+  const submitDispute = async () => {
+    if (!disputeForm.description.trim()) {
+      setDisputeError("Describe la discrepancia");
+      return;
+    }
+
+    setIsDisputeSubmitting(true);
+    setDisputeError(null);
+    try {
+      const created = await purchaseApi.createDispute({
+        purchase_order_id: order.purchase_order_id,
+        dispute_type: disputeForm.dispute_type,
+        description: disputeForm.description.trim(),
+      });
+      setDisputes((prev) => [created, ...prev]);
+      setShowDisputeForm(false);
+      setDisputeForm({ dispute_type: "MISSING_GOODS", description: "" });
+    } catch (err) {
+      setDisputeError(
+        err instanceof Error ? err.message : "Error al reportar la discrepancia",
+      );
+    } finally {
+      setIsDisputeSubmitting(false);
+    }
+  };
+
+  const submitResolveDispute = async (disputeId: string) => {
+    if (!resolutionNotes.trim()) return;
+    try {
+      const resolved = await purchaseApi.resolveDispute(disputeId, {
+        resolution_notes: resolutionNotes.trim(),
+      });
+      setDisputes((prev) =>
+        prev.map((d) => (d.dispute_id === disputeId ? resolved : d)),
+      );
+      setResolvingDisputeId(null);
+      setResolutionNotes("");
+    } catch {
+      // El error se refleja dejando el formulario abierto para reintentar.
+    }
+  };
 
   const balanceDue = Number(order.balance_due ?? 0);
   const accountPayableId = order.purchase_account_payable_id ?? "";
@@ -328,6 +464,12 @@ export function PurchaseOrderDetailPanel({
                 label="Vencimiento"
                 value={formatDate(order.due_date)}
               />
+              {order.payment_due_date && (
+                <SummaryField
+                  label="Fecha límite de pago"
+                  value={formatDate(order.payment_due_date)}
+                />
+              )}
               <SummaryField
                 label="Condición"
                 value={
@@ -490,17 +632,126 @@ export function PurchaseOrderDetailPanel({
         <>
           <div className="grid gap-6 xl:grid-cols-2">
             <Section title="Facturas">
-              <StackList
-                items={order.invoices.map((invoice) => ({
-                  id: invoice.supplier_invoice_id,
-                  title: invoice.invoice_number,
-                  meta: `${formatDate(invoice.invoice_date)} · ${invoice.payment_condition}`,
-                  badge: invoice.paid ? "Pagada" : "Pendiente",
-                  badgeVariant: invoice.paid ? "green" : "yellow",
-                  amount: formatCurrency(invoice.total_amount),
-                }))}
-                emptyMessage="No hay facturas registradas para esta orden."
-              />
+              {order.invoices.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-sm text-gray-500">
+                  No hay facturas registradas para esta orden.
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                  {order.invoices.map((invoice) => (
+                    <div
+                      key={invoice.supplier_invoice_id}
+                      className="border-t border-gray-200 px-4 py-3 first:border-t-0"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900">
+                            {invoice.invoice_number}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatDate(invoice.invoice_date)} ·{" "}
+                            {invoice.payment_condition}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-sm text-gray-700">
+                            {formatCurrency(invoice.total_amount)}
+                          </span>
+                          <Badge variant={invoice.paid ? "green" : "yellow"}>
+                            {invoice.paid ? "Pagada" : "Pendiente"}
+                          </Badge>
+                          {isInvoiceEditable &&
+                            editingInvoiceId !== invoice.supplier_invoice_id && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  openInvoiceEdit(invoice.supplier_invoice_id)
+                                }
+                              >
+                                Editar factura
+                              </Button>
+                            )}
+                        </div>
+                      </div>
+
+                      {editingInvoiceId === invoice.supplier_invoice_id && (
+                        <div className="mt-3 space-y-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
+                          {invoiceEditItems.map((item, index) => (
+                            <div
+                              key={item.product_variant_id}
+                              className="grid grid-cols-1 gap-2 sm:grid-cols-[1.5fr_1fr_1fr]"
+                            >
+                              <p className="self-center text-xs text-gray-700">
+                                {item.label}
+                              </p>
+                              <Input
+                                label="Cantidad"
+                                type="number"
+                                min="1"
+                                value={item.quantity_billed}
+                                onChange={(e) =>
+                                  setInvoiceEditItems((prev) =>
+                                    prev.map((it, i) =>
+                                      i === index
+                                        ? { ...it, quantity_billed: e.target.value }
+                                        : it,
+                                    ),
+                                  )
+                                }
+                              />
+                              <Input
+                                label="Costo unitario"
+                                type="number"
+                                min="0.01"
+                                step="0.001"
+                                value={item.unit_price}
+                                onChange={(e) =>
+                                  setInvoiceEditItems((prev) =>
+                                    prev.map((it, i) =>
+                                      i === index
+                                        ? { ...it, unit_price: e.target.value }
+                                        : it,
+                                    ),
+                                  )
+                                }
+                              />
+                            </div>
+                          ))}
+
+                          {invoiceEditError && (
+                            <p className="text-xs text-red-600 font-medium">
+                              {invoiceEditError}
+                            </p>
+                          )}
+
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setEditingInvoiceId(null)}
+                              disabled={isInvoiceEditSubmitting}
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="primary"
+                              size="sm"
+                              onClick={submitInvoiceEdit}
+                              loading={isInvoiceEditSubmitting}
+                            >
+                              Guardar cambios
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </Section>
 
             <Section
@@ -610,7 +861,7 @@ export function PurchaseOrderDetailPanel({
                             Conversión en vivo
                           </p>
                           <p className="text-sm font-medium text-blue-900 mt-1">
-                            {amount.toLocaleString("es-CR", {
+                            {amount.toLocaleString("es-VE", {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
                             })}{" "}
@@ -635,7 +886,7 @@ export function PurchaseOrderDetailPanel({
                           <div className="text-right text-xs text-blue-700">
                             <p className="font-medium">
                               Tasa:{" "}
-                              {effectiveExchangeRate.toLocaleString("es-CR", {
+                              {effectiveExchangeRate.toLocaleString("es-VE", {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 6,
                               })}
@@ -691,7 +942,7 @@ export function PurchaseOrderDetailPanel({
                           }
                           className="mt-2"
                           hint={`Tasa del sistema: ${exchangeRate?.toLocaleString(
-                            "es-CR",
+                            "es-VE",
                             {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 6,
@@ -810,7 +1061,7 @@ export function PurchaseOrderDetailPanel({
                 items={order.payments.map((payment) => ({
                   id: payment.purchase_order_payment_id,
                   title:
-                    `${formatCurrency(payment.amount_paid)} ${payment.currency_code && payment.currency_code !== "CRC" ? `(${payment.currency_code})` : ""}`.trim(),
+                    `${formatCurrency(payment.amount_paid)} ${payment.currency_code && payment.currency_code !== "USD" ? `(${payment.currency_code})` : ""}`.trim(),
                   meta: `${formatPaymentMethodName(payment.payment_method_name)} · ${formatDateTime(payment.payment_date)}`,
                   description: payment.payment_reference ?? "Sin referencia",
                   originalData: payment,
@@ -871,6 +1122,171 @@ export function PurchaseOrderDetailPanel({
               )}
             </Section>
           </div>
+
+          <Section
+            title="Discrepancias con el proveedor"
+            action={
+              !showDisputeForm ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowDisputeForm(true)}
+                >
+                  Reportar discrepancia
+                </Button>
+              ) : null
+            }
+          >
+            {showDisputeForm && (
+              <div className="mb-3 space-y-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+                <Select
+                  label="Tipo de discrepancia"
+                  value={disputeForm.dispute_type}
+                  onChange={(e) =>
+                    setDisputeForm((p) => ({
+                      ...p,
+                      dispute_type: e.target.value as
+                        | "MISSING_GOODS"
+                        | "PRICE_MISMATCH",
+                    }))
+                  }
+                  options={[
+                    { value: "MISSING_GOODS", label: "Mercancía incompleta" },
+                    { value: "PRICE_MISMATCH", label: "Precio distinto al pactado" },
+                  ]}
+                />
+                <Input
+                  label="Descripción"
+                  value={disputeForm.description}
+                  onChange={(e) =>
+                    setDisputeForm((p) => ({
+                      ...p,
+                      description: e.target.value,
+                    }))
+                  }
+                  hint="Detalla lo ocurrido para el historial de la orden."
+                />
+                {disputeError && (
+                  <p className="text-xs text-red-600 font-medium">
+                    {disputeError}
+                  </p>
+                )}
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDisputeForm(false)}
+                    disabled={isDisputeSubmitting}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={submitDispute}
+                    loading={isDisputeSubmitting}
+                  >
+                    Enviar reporte
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {disputes.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-sm text-gray-500">
+                No hay discrepancias reportadas para esta orden.
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                {disputes.map((dispute) => (
+                  <div
+                    key={dispute.dispute_id}
+                    className="border-t border-gray-200 px-4 py-3 first:border-t-0"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {disputeTypeLabels[dispute.dispute_type] ??
+                            dispute.dispute_type}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {dispute.description}
+                        </p>
+                        {dispute.status === "RESOLVED" &&
+                          dispute.resolution_notes && (
+                            <p className="mt-1 text-xs text-emerald-700">
+                              Resolución: {dispute.resolution_notes}
+                            </p>
+                          )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {dispute.notify_supplier_pending && (
+                          <Badge variant="yellow">Pendiente notificar</Badge>
+                        )}
+                        <Badge
+                          variant={
+                            dispute.status === "RESOLVED" ? "green" : "red"
+                          }
+                        >
+                          {dispute.status === "RESOLVED"
+                            ? "Resuelta"
+                            : "Abierta"}
+                        </Badge>
+                        {dispute.status === "OPEN" &&
+                          resolvingDisputeId !== dispute.dispute_id && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setResolvingDisputeId(dispute.dispute_id);
+                                setResolutionNotes("");
+                              }}
+                            >
+                              Marcar resuelta
+                            </Button>
+                          )}
+                      </div>
+                    </div>
+
+                    {resolvingDisputeId === dispute.dispute_id && (
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                        <Input
+                          label="Notas de resolución"
+                          value={resolutionNotes}
+                          onChange={(e) => setResolutionNotes(e.target.value)}
+                          className="flex-1"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setResolvingDisputeId(null)}
+                          >
+                            Cancelar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="sm"
+                            onClick={() =>
+                              submitResolveDispute(dispute.dispute_id)
+                            }
+                          >
+                            Confirmar
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
         </>
       )}
     </div>

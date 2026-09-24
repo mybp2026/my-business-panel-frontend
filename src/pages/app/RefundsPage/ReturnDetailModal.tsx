@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
 
 import { returnsApi } from "@/api/returns.api";
 import { paymentMethods, refundStatuses } from "@/constants/payment-methods";
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
 import type { ReturnTransactionDetail } from "@/interfaces/entities/ReturnTransaction.interface";
 
-import { formatCurrency, formatDate } from "./refunds.utils";
+import { formatDate } from "./refunds.utils";
 
 const statusVariant = (statusId: number | null): "green" | "red" | "yellow" | "gray" => {
   if (statusId === 3) return "green";
@@ -26,6 +28,7 @@ export function ReturnDetailModal({
   const [detail, setDetail] = useState<ReturnTransactionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const rate = useCurrentExchangeRate();
 
   useEffect(() => {
     returnsApi
@@ -89,9 +92,11 @@ export function ReturnDetailModal({
               <p className="text-xs font-medium text-gray-500 uppercase mb-1">
                 Monto total reembolsado
               </p>
-              <p className="text-xl font-bold text-gray-900">
-                {formatCurrency(Number(tx.total_refund_amount))}
-              </p>
+              <DualCurrencyAmount
+                amountBs={Number(tx.total_refund_amount)}
+                rate={rate}
+                bold
+              />
             </div>
           </div>
 
@@ -132,10 +137,10 @@ export function ReturnDetailModal({
                       </td>
                       <td className="py-2 pr-3 text-right">{p.quantity}</td>
                       <td className="py-2 pr-3 text-right">
-                        {formatCurrency(Number(p.unit_price))}
+                        <DualCurrencyAmount amountBs={Number(p.unit_price)} rate={rate} align="right" />
                       </td>
                       <td className="py-2 text-right font-medium">
-                        {formatCurrency(Number(p.total_price))}
+                        <DualCurrencyAmount amountBs={Number(p.total_price)} rate={rate} bold align="right" />
                       </td>
                     </tr>
                   ))}

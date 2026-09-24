@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
 import { usePrintInvoice } from "@/hooks/usePrintInvoice";
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
 import { CreditDebitNotesSection } from "./CreditDebitNotesSection";
 import {
   getInvoiceForSale,
@@ -22,11 +24,6 @@ interface SaleDetailModalProps {
 
 const formatDateTime = (value?: string | null) =>
   value ? new Date(value).toLocaleString("es-VE") : "—";
-
-const formatCurrency = (value: number | null | undefined, symbol: string) =>
-  `${symbol} ${Number(value ?? 0).toLocaleString("es-VE", {
-    minimumFractionDigits: 2,
-  })}`;
 
 export function SaleDetailModal({
   isOpen,
@@ -70,9 +67,9 @@ export function SaleDetailModal({
   }, [isOpen, sale]);
 
   const { printInvoice } = usePrintInvoice();
+  const rate = useCurrentExchangeRate();
 
   if (!sale) return null;
-  const symbol = sale.symbol ?? "";
 
   const royaltyItems = saleItems.filter(
     (item) => Number(item.unit_price) === 0 && Number(item.total_price) === 0,
@@ -117,15 +114,15 @@ export function SaleDetailModal({
           />
           <Field
             label="Subtotal"
-            value={formatCurrency(sale.subtotal_amount, symbol)}
+            valueNode={<DualCurrencyAmount amountBs={sale.subtotal_amount} rate={rate} />}
           />
           <Field
             label="Impuestos"
-            value={formatCurrency(sale.tax_amount, symbol)}
+            valueNode={<DualCurrencyAmount amountBs={sale.tax_amount} rate={rate} />}
           />
           <Field
             label="Total"
-            value={formatCurrency(sale.total_amount, symbol)}
+            valueNode={<DualCurrencyAmount amountBs={sale.total_amount} rate={rate} bold />}
           />
         </div>
 
@@ -161,10 +158,10 @@ export function SaleDetailModal({
                         {item.quantity}
                       </td>
                       <td className="px-3 py-2 text-right text-gray-700">
-                        {formatCurrency(item.unit_price, symbol)}
+                        <DualCurrencyAmount amountBs={item.unit_price} rate={rate} align="right" />
                       </td>
                       <td className="px-3 py-2 text-right font-semibold text-gray-900">
-                        {formatCurrency(item.total_price, symbol)}
+                        <DualCurrencyAmount amountBs={item.total_price} rate={rate} bold align="right" />
                       </td>
                     </tr>
                   ))}
@@ -200,8 +197,13 @@ export function SaleDetailModal({
                       </span>
                     )}
                   </div>
-                  <span className="text-emerald-700 font-semibold whitespace-nowrap">
-                    -{formatCurrency(item.discount_applied ?? 0, symbol)}
+                  <span className="text-emerald-700 whitespace-nowrap">
+                    <DualCurrencyAmount
+                      amountBs={-(item.discount_applied ?? 0)}
+                      rate={rate}
+                      bold
+                      align="right"
+                    />
                   </span>
                 </div>
               ))}
@@ -268,29 +270,60 @@ export function SaleDetailModal({
                 )}
                 <Field
                   label="Subtotal"
-                  value={formatCurrency(digitalInvoice.subtotal_amount, symbol)}
+                  valueNode={
+                    <DualCurrencyAmount
+                      amountBs={digitalInvoice.subtotal_amount}
+                      rate={rate}
+                    />
+                  }
                 />
                 <Field
                   label="Descuentos"
-                  value={formatCurrency(digitalInvoice.total_discount, symbol)}
+                  valueNode={
+                    <DualCurrencyAmount
+                      amountBs={-digitalInvoice.total_discount}
+                      rate={rate}
+                    />
+                  }
                 />
                 <Field
                   label="Impuestos"
-                  value={formatCurrency(digitalInvoice.tax_amount, symbol)}
+                  valueNode={
+                    <DualCurrencyAmount
+                      amountBs={digitalInvoice.tax_amount}
+                      rate={rate}
+                    />
+                  }
                 />
                 <Field
                   label="Total"
-                  value={formatCurrency(digitalInvoice.total_amount, symbol)}
+                  valueNode={
+                    <DualCurrencyAmount
+                      amountBs={digitalInvoice.total_amount}
+                      rate={rate}
+                      bold
+                    />
+                  }
                 />
                 {digitalInvoice.amount_paid > 0 && (
                   <Field
                     label="Monto pagado"
-                    value={formatCurrency(digitalInvoice.amount_paid, symbol)}
+                    valueNode={
+                      <DualCurrencyAmount
+                        amountBs={digitalInvoice.amount_paid}
+                        rate={rate}
+                      />
+                    }
                   />
                 )}
                 <Field
                   label="Vuelto"
-                  value={formatCurrency(digitalInvoice.change_amount, symbol)}
+                  valueNode={
+                    <DualCurrencyAmount
+                      amountBs={digitalInvoice.change_amount}
+                      rate={rate}
+                    />
+                  }
                 />
                 <Field
                   label="Puntos de fidelidad obtenidos"
@@ -312,7 +345,7 @@ export function SaleDetailModal({
         {!isLoading && digitalInvoice && (
           <CreditDebitNotesSection
             invoiceId={digitalInvoice.invoice_id}
-            currencySymbol={symbol}
+            currencySymbol="Bs."
           />
         )}
 

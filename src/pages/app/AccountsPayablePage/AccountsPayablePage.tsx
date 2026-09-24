@@ -41,7 +41,7 @@ import {
   getPayableStatusTone,
 } from "@/utils/purchase";
 
-const BASE_CURRENCY_ID = 1; // VES
+const BASE_CURRENCY_ID = 2; // USD — moneda base de Compras/CxP; VES es conversion secundaria
 
 interface PaymentFormState {
   purchase_account_payable_id: string;
@@ -373,15 +373,18 @@ export function AccountsPayablePage() {
   }, [paymentForm.exchange_rate_override, exchangeRate]);
 
   const amount = Number(paymentForm.amount_paid) || 0;
+  // Tasa del sistema es siempre USD -> VES (multiplicativa: 1 USD = rate VES).
   const convertedAmount = useMemo(() => {
+    if (effectiveExchangeRate <= 0) return null;
     if (selectedCurrencyId === BASE_CURRENCY_ID) {
-      if (effectiveExchangeRate <= 0) return null;
-      return round2(amount / effectiveExchangeRate);
-    } else {
-      if (effectiveExchangeRate <= 0) return null;
+      // Monto ingresado en USD (base): mostrar equivalente en VES.
       return round2(amount * effectiveExchangeRate);
     }
+    // Monto ingresado en VES (moneda alterna): mostrar equivalente en USD.
+    return round2(amount / effectiveExchangeRate);
   }, [amount, selectedCurrencyId, effectiveExchangeRate]);
+  const convertedCurrencyLabel =
+    selectedCurrencyId === BASE_CURRENCY_ID ? "Bs." : "$";
 
   return (
     <div className="p-6 lg:p-8">
@@ -663,7 +666,7 @@ export function AccountsPayablePage() {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}{" "}
-                          Bs.
+                          {convertedCurrencyLabel}
                         </span>
                       </p>
                     </div>

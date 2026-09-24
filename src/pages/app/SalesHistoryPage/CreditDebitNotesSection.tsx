@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Toast } from "@/components/ui/Toast";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
+
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
 
 import { IconPlus } from "@/assets/icons";
 
@@ -32,11 +35,6 @@ const REASON_OPTIONS: { value: CreditDebitNoteReasonKind; label: string }[] = [
   { value: "otro", label: "Otro" },
 ];
 
-const formatCurrency = (value: number | string, symbol: string) =>
-  `${symbol} ${Number(value).toLocaleString("es-VE", {
-    minimumFractionDigits: 2,
-  })}`;
-
 /**
  * Notas de credito/debito sobre una factura de venta (MBP_Cambios_CR_a_Venezuela.md,
  * seccion POS). La factura no se edita ni anula -- esto es un registro de
@@ -47,6 +45,7 @@ export function CreditDebitNotesSection({
   invoiceId,
   currencySymbol,
 }: CreditDebitNotesSectionProps) {
+  const rate = useCurrentExchangeRate();
   const [notes, setNotes] = useState<CreditDebitNote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -244,16 +243,17 @@ export function CreditDebitNotesSection({
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <span
-                  className={`font-semibold ${
+                <DualCurrencyAmount
+                  amountBs={
+                    (note.note_type === "credit" ? -1 : 1) * Number(note.amount)
+                  }
+                  rate={rate}
+                  amountClassName={`font-semibold ${
                     note.note_type === "credit"
                       ? "text-emerald-700"
                       : "text-amber-700"
                   }`}
-                >
-                  {note.note_type === "credit" ? "-" : "+"}
-                  {formatCurrency(note.amount, currencySymbol)}
-                </span>
+                />
                 {!note.is_voided && (
                   <Button size="sm" variant="ghost" onClick={() => handleVoid(note)}>
                     Anular

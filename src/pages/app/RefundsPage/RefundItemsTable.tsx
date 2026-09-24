@@ -1,6 +1,8 @@
 import type { SaleRefundContext } from "@/interfaces/entities/SaleRefundContext.interface";
 
 import type { ItemSelection } from "@/hooks/useRefundFlow";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
 
 interface SelectableProps {
   mode: "partial";
@@ -19,12 +21,10 @@ interface ReadOnlyProps {
 
 type RefundItemsTableProps = SelectableProps | ReadOnlyProps;
 
-const fmtMoney = (symbol: string, value: number) =>
-  `${symbol} ${value.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`;
-
 export function RefundItemsTable(props: RefundItemsTableProps) {
-  const { mode, items, currencySymbol } = props;
+  const { mode, items } = props;
   const selectable = mode === "partial";
+  const rate = useCurrentExchangeRate();
 
   return (
     <div className="overflow-x-auto">
@@ -90,10 +90,10 @@ export function RefundItemsTable(props: RefundItemsTableProps) {
                     />
                   </td>
                   <td className="py-2 text-right">
-                    {fmtMoney(currencySymbol, it.unit_price)}
+                    <DualCurrencyAmount amountBs={it.unit_price} rate={rate} align="right" />
                   </td>
                   <td className="py-2 text-right font-semibold">
-                    {fmtMoney(currencySymbol, lineTotal)}
+                    <DualCurrencyAmount amountBs={lineTotal} rate={rate} bold align="right" />
                   </td>
                 </tr>
               );
@@ -109,10 +109,10 @@ export function RefundItemsTable(props: RefundItemsTableProps) {
                   {it.available_quantity}
                 </td>
                 <td className="py-2 text-right">
-                  {fmtMoney(currencySymbol, it.unit_price)}
+                  <DualCurrencyAmount amountBs={it.unit_price} rate={rate} align="right" />
                 </td>
                 <td className="py-2 text-right font-semibold">
-                  {fmtMoney(currencySymbol, it.total_price)}
+                  <DualCurrencyAmount amountBs={it.total_price} rate={rate} bold align="right" />
                 </td>
               </tr>
             );

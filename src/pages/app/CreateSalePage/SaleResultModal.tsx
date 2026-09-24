@@ -1,8 +1,10 @@
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
 import { IconCheckCircle } from "@/assets/icons";
 import type { InvoiceInfo } from "@/interfaces/entities/Sale.interface";
 import { usePrintInvoice } from "@/hooks/usePrintInvoice";
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
 
 interface PaymentSplit {
   id: string;
@@ -45,15 +47,14 @@ export function SaleResultModal({
   isOpen,
   saleId,
   totalAmount,
-  currencySymbol,
   items,
   digitalInvoice,
   pointsRedeemed,
   pointsRate,
   onNewSale,
 }: SaleResultModalProps) {
-  const symbol = digitalInvoice?.currency_symbol ?? currencySymbol;
   const { printInvoice } = usePrintInvoice();
+  const rate = useCurrentExchangeRate();
 
   const handlePrint = () => {
     printInvoice({
@@ -115,9 +116,7 @@ export function SaleResultModal({
           />
           <Row
             label="Total"
-            value={
-              <span className="font-semibold">{fmt(totalAmount, symbol)}</span>
-            }
+            value={<DualCurrencyAmount amountBs={totalAmount} rate={rate} bold align="right" />}
           />
         </div>
 
@@ -280,19 +279,19 @@ export function SaleResultModal({
                             {it.quantity}
                           </td>
                           <td className="px-2 py-2 text-right text-gray-700">
-                            {fmt(it.unit_price, symbol)}
+                            <DualCurrencyAmount amountBs={it.unit_price} rate={rate} align="right" />
                           </td>
                           <td className="px-2 py-2 text-right text-gray-700">
-                            {fmt(it.subtotal, symbol)}
+                            <DualCurrencyAmount amountBs={it.subtotal} rate={rate} align="right" />
                           </td>
                           <td className="px-2 py-2 text-right text-gray-500">
                             {Number(it.tax_rate_percentage ?? 0)}%
                           </td>
                           <td className="px-2 py-2 text-right text-gray-700">
-                            {fmt(it.tax_amount, symbol)}
+                            <DualCurrencyAmount amountBs={it.tax_amount} rate={rate} align="right" />
                           </td>
                           <td className="px-2 py-2 text-right font-semibold text-gray-900">
-                            {fmt(it.total_price, symbol)}
+                            <DualCurrencyAmount amountBs={it.total_price} rate={rate} bold align="right" />
                           </td>
                         </tr>
                       ))}
@@ -307,7 +306,6 @@ export function SaleResultModal({
                 <Section title="Métodos de pago">
                   <div className="space-y-1">
                     {digitalInvoice.payments.map((p) => {
-                      const sym = p.currency_symbol ?? symbol;
                       const label = p.is_points_redemption
                         ? `${p.payment_method_name ?? "Puntos"} (puntos: ${p.points_redeemed})`
                         : (p.payment_method_name ?? "Método");
@@ -317,9 +315,12 @@ export function SaleResultModal({
                           className="flex justify-between gap-2 text-sm"
                         >
                           <span className="text-gray-700">{label}</span>
-                          <span className="font-semibold text-gray-900">
-                            {fmt(p.payment_amount, sym)}
-                          </span>
+                          <DualCurrencyAmount
+                            amountBs={p.payment_amount}
+                            rate={rate}
+                            bold
+                            align="right"
+                          />
                         </div>
                       );
                     })}
@@ -330,36 +331,69 @@ export function SaleResultModal({
             <Section title="Resumen">
               <Row
                 label="Subtotal"
-                value={fmt(digitalInvoice.subtotal_amount, symbol)}
+                value={
+                  <DualCurrencyAmount
+                    amountBs={digitalInvoice.subtotal_amount}
+                    rate={rate}
+                    align="right"
+                  />
+                }
               />
               {digitalInvoice.total_discount > 0 && (
                 <Row
                   label="Descuentos"
-                  value={`-${fmt(digitalInvoice.total_discount, symbol)}`}
+                  value={
+                    <DualCurrencyAmount
+                      amountBs={-digitalInvoice.total_discount}
+                      rate={rate}
+                      align="right"
+                    />
+                  }
                 />
               )}
               <Row
                 label="Impuestos"
-                value={fmt(digitalInvoice.tax_amount, symbol)}
+                value={
+                  <DualCurrencyAmount
+                    amountBs={digitalInvoice.tax_amount}
+                    rate={rate}
+                    align="right"
+                  />
+                }
               />
               <Row
                 label="Total"
                 value={
-                  <span className="font-semibold">
-                    {fmt(digitalInvoice.total_amount, symbol)}
-                  </span>
+                  <DualCurrencyAmount
+                    amountBs={digitalInvoice.total_amount}
+                    rate={rate}
+                    bold
+                    align="right"
+                  />
                 }
               />
               {digitalInvoice.amount_paid > 0 && (
                 <Row
                   label="Monto pagado"
-                  value={fmt(digitalInvoice.amount_paid, symbol)}
+                  value={
+                    <DualCurrencyAmount
+                      amountBs={digitalInvoice.amount_paid}
+                      rate={rate}
+                      align="right"
+                    />
+                  }
                 />
               )}
               {digitalInvoice.change_amount > 0 && (
                 <Row
                   label="Cambio"
-                  value={fmt(digitalInvoice.change_amount, symbol)}
+                  value={
+                    <DualCurrencyAmount
+                      amountBs={digitalInvoice.change_amount}
+                      rate={rate}
+                      align="right"
+                    />
+                  }
                 />
               )}
               {!!pointsRedeemed &&
@@ -433,7 +467,7 @@ export function SaleResultModal({
                         {item.quantity}
                       </td>
                       <td className="px-3 py-2 text-right font-semibold text-gray-900">
-                        {fmt(item.total_price, symbol)}
+                        <DualCurrencyAmount amountBs={item.total_price} rate={rate} bold align="right" />
                       </td>
                     </tr>
                   ))}

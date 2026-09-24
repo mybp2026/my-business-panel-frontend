@@ -335,38 +335,6 @@ export function PaymentAlertsPage() {
             />
           </div>
 
-          <div className="mt-5 space-y-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-            <label className="flex items-center gap-3 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={configForm.email_notifications_enabled}
-                onChange={(event) =>
-                  setConfigForm((prev) => ({
-                    ...prev,
-                    email_notifications_enabled: event.target.checked,
-                  }))
-                }
-                className="h-4 w-4 rounded border-gray-300 text-amber-600"
-              />
-              Habilitar canal de correo electrónico
-            </label>
-
-            <label className="flex items-center gap-3 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={configForm.sms_notifications_enabled}
-                onChange={(event) =>
-                  setConfigForm((prev) => ({
-                    ...prev,
-                    sms_notifications_enabled: event.target.checked,
-                  }))
-                }
-                className="h-4 w-4 rounded border-gray-300 text-amber-600"
-              />
-              Habilitar canal de SMS
-            </label>
-          </div>
-
           <div className="mt-5 rounded-2xl border border-gray-200 bg-white p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
               Tipos disponibles
