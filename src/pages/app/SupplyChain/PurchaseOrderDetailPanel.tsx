@@ -10,6 +10,7 @@ import type {
   PurchaseDispute,
   PurchaseMatching,
   PurchaseOrderDetail,
+  SupplierCredit,
 } from "@/interfaces/entities/Purchase.interface";
 import type { CreatePurchasePaymentRequest } from "@/interfaces/api/requests/PurchaseModuleRequests.interface";
 
@@ -98,6 +99,54 @@ export function PurchaseOrderDetailPanel({
   const [invoiceEditError, setInvoiceEditError] = useState<string | null>(
     null,
   );
+
+  const [supplierCredits, setSupplierCredits] = useState<SupplierCredit[]>([]);
+  const [applyingCreditId, setApplyingCreditId] = useState<string | null>(null);
+  const [supplierCreditError, setSupplierCreditError] = useState<string | null>(
+    null,
+  );
+
+  const reloadSupplierCredits = () => {
+    purchaseApi
+      .listSupplierCredits(order.supplier_id)
+      .then(setSupplierCredits)
+      .catch(() => setSupplierCredits([]));
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    purchaseApi
+      .listSupplierCredits(order.supplier_id)
+      .then((rows) => {
+        if (!cancelled) setSupplierCredits(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setSupplierCredits([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [order.supplier_id]);
+
+  const submitApplySupplierCredit = async (creditId: string) => {
+    if (!accountPayableId) return;
+    setApplyingCreditId(creditId);
+    setSupplierCreditError(null);
+    try {
+      await purchaseApi.applySupplierCredit(creditId, {
+        purchase_account_payable_id: accountPayableId,
+      });
+      reloadSupplierCredits();
+    } catch (err) {
+      setSupplierCreditError(
+        err instanceof Error
+          ? err.message
+          : "Error al aplicar el crédito del proveedor",
+      );
+    } finally {
+      setApplyingCreditId(null);
+    }
+  };
 
   const [disputes, setDisputes] = useState<PurchaseDispute[]>([]);
   const [showDisputeForm, setShowDisputeForm] = useState(false);
@@ -1122,6 +1171,45 @@ export function PurchaseOrderDetailPanel({
               )}
             </Section>
           </div>
+
+          {supplierCredits.length > 0 && (
+            <Section title="Créditos del proveedor disponibles">
+              <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50">
+                {supplierCreditError && (
+                  <p className="px-4 pt-3 text-xs font-medium text-red-600">
+                    {supplierCreditError}
+                  </p>
+                )}
+                {supplierCredits.map((credit) => (
+                  <div
+                    key={credit.supplier_credit_id}
+                    className="flex flex-wrap items-center justify-between gap-3 border-t border-emerald-100 px-4 py-3 first:border-t-0"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-900">
+                        {formatCurrency(credit.remaining_amount)} disponibles
+                      </p>
+                      <p className="text-xs text-emerald-700">
+                        Origen: nota de crédito por mercancía dañada
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={!accountPayableId || isPaid}
+                      loading={applyingCreditId === credit.supplier_credit_id}
+                      onClick={() =>
+                        submitApplySupplierCredit(credit.supplier_credit_id)
+                      }
+                    >
+                      Aplicar a esta orden
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
 
           <Section
             title="Discrepancias con el proveedor"
