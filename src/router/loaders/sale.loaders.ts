@@ -153,11 +153,15 @@ export const getSalesByBranch = async (
   branchId: string,
   page = 1,
   limit = SALES_PAGE_LIMIT,
+  dateFrom?: string,
+  dateTo?: string,
 ): Promise<PaginatedResponse<SaleListItem>> =>
-  saleApi.listByBranch(branchId, page, limit);
+  saleApi.listByBranch(branchId, page, limit, dateFrom, dateTo);
 
 export const getSalesByTenant = async (
   page = 1,
   limit = SALES_PAGE_LIMIT,
+  dateFrom?: string,
+  dateTo?: string,
 ): Promise<PaginatedResponse<SaleListItem>> =>
-  saleApi.listByTenant(page, limit);
+  saleApi.listByTenant(page, limit, dateFrom, dateTo);
