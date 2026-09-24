@@ -106,6 +106,7 @@ export interface PurchaseOrder {
   purchase_order_id: string;
   purchase_order_date: string;
   expected_delivery_date: string;
+  payment_due_date?: string | null;
   purchase_order_status_id: number;
   purchase_order_status_name: string;
   supplier_id: string;
@@ -255,4 +256,22 @@ export interface PaymentAlertConfigResponse {
   tenant_id: string;
   config: PaymentAlertConfig | null;
   alert_types: PaymentAlertType[];
+}
+
+export type PurchaseDisputeType = 'MISSING_GOODS' | 'PRICE_MISMATCH';
+export type PurchaseDisputeStatus = 'OPEN' | 'RESOLVED';
+
+export interface PurchaseDispute {
+  dispute_id: string;
+  purchase_order_id: string;
+  supplier_invoice_id?: string | null;
+  tenant_id: string;
+  dispute_type: PurchaseDisputeType;
+  description: string;
+  status: PurchaseDisputeStatus;
+  notify_supplier_pending: boolean;
+  resolution_notes?: string | null;
+  created_at?: string;
+  resolved_at?: string | null;
+  updated_at?: string;
 }

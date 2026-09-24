@@ -36,23 +36,24 @@ export function convertAmount(
   return rate ? amount * Number(rate.rate) : amount;
 }
 
-// Backward-compatible base-currency formatter — delegates to formatInCurrency
-const BASE_CURRENCY: Currency = {
-  currency_id: 1,
-  currency_code: "VES",
-  currency_name: "Bolívar",
-  symbol: "Bs.",
+// Moneda base de Compras/CxP: USD (currency_id 2). VES queda como conversion
+// secundaria via la tasa vigente (general_schema.get_effective_exchange_rate).
+export const BASE_CURRENCY: Currency = {
+  currency_id: 2,
+  currency_code: "USD",
+  currency_name: "US Dollar",
+  symbol: "$",
 };
 
 export const formatCurrency = (value?: NumericLike | null) =>
   formatInCurrency(Number(value ?? 0), BASE_CURRENCY);
 
 export const formatDate = (value?: string | null) =>
-  value ? new Date(value).toLocaleDateString("es-CR") : "—";
+  value ? new Date(value).toLocaleDateString("es-VE") : "—";
 
 export const formatDateTime = (value?: string | null) =>
   value
-    ? new Date(value).toLocaleString("es-CR", {
+    ? new Date(value).toLocaleString("es-VE", {
         dateStyle: "short",
         timeStyle: "short",
       })

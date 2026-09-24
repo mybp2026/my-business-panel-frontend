@@ -1,15 +1,19 @@
+import type { ReactNode } from "react";
+
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
 import { IconTrash } from "@/assets/icons";
 
 import { paymentMethods, refundStatuses } from "@/constants/payment-methods";
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
 
 import type { SaleRefundContext } from "@/interfaces/entities/SaleRefundContext.interface";
 
 import { DetailBox } from "./DetailBox";
 import { RefundItemsTable } from "./RefundItemsTable";
-import { formatCurrency, formatDate } from "./refunds.utils";
+import { formatDate } from "./refunds.utils";
 import type { ItemSelection, RefundMode } from "@/hooks/useRefundFlow";
 
 interface SaleContextPanelProps {
@@ -55,6 +59,7 @@ export function SaleContextPanel({
     ? `${context.customer.first_name ?? ""} ${context.customer.last_name ?? ""}`.trim() ||
       "—"
     : "—";
+  const rate = useCurrentExchangeRate();
 
   return (
     <div className="bg-white rounded-2xl border border-gray-300 p-6 mb-6 space-y-6">
@@ -72,7 +77,7 @@ export function SaleContextPanel({
         />
         <DetailBox
           label="Total venta"
-          value={formatCurrency(context.sale.total_amount, currencySymbol)}
+          value={<DualCurrencyAmount amountBs={context.sale.total_amount} rate={rate} />}
         />
         <DetailBox
           label="Estado"
@@ -101,10 +106,7 @@ export function SaleContextPanel({
             },
             {
               label: "Total",
-              value: formatCurrency(
-                context.invoice.total_amount,
-                currencySymbol,
-              ),
+              value: <DualCurrencyAmount amountBs={context.invoice.total_amount} rate={rate} />,
             },
           ]}
         />
@@ -164,7 +166,7 @@ export function SaleContextPanel({
 
 interface InvoiceRow {
   label: string;
-  value: string;
+  value: ReactNode;
   mono?: boolean;
 }
 
@@ -212,13 +214,13 @@ function PartialRefundActions({
   returnStatusId,
   onReturnStatusChange,
   refundTotal,
-  currencySymbol,
   description,
   onDescriptionChange,
   isSubmitting,
   canSubmit,
   onSubmit,
 }: PartialRefundActionsProps) {
+  const rate = useCurrentExchangeRate();
   return (
     <div className="border-t border-gray-200 pt-4 space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -244,9 +246,7 @@ function PartialRefundActions({
           <p className="text-xs uppercase tracking-wider text-gray-500">
             Total a reembolsar
           </p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
-            {formatCurrency(refundTotal, currencySymbol)}
-          </p>
+          <DualCurrencyAmount amountBs={refundTotal} rate={rate} bold />
         </div>
       </div>
       {/* Description — required */}

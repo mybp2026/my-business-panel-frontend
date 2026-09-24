@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Table } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
+
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
 
 import { IconPlus } from "@/assets/icons";
 
@@ -20,11 +23,6 @@ import type { CreditDebitNoteListItem } from "@/interfaces/entities/CreditDebitN
 interface CreditDebitNotesListSectionProps {
   initialNotes: CreditDebitNoteListItem[];
 }
-
-const formatCurrency = (value: number | string, symbol = "Bs.") =>
-  `${symbol} ${Number(value).toLocaleString("es-VE", {
-    minimumFractionDigits: 2,
-  })}`;
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleString("es-VE", {
@@ -51,6 +49,7 @@ const REASON_LABELS: Record<string, string> = {
 export function CreditDebitNotesListSection({
   initialNotes,
 }: CreditDebitNotesListSectionProps) {
+  const rate = useCurrentExchangeRate();
   const [notes, setNotes] = useState<CreditDebitNoteListItem[]>(initialNotes);
   const [isReloading, setIsReloading] = useState(false);
   const [search, setSearch] = useState("");
@@ -216,16 +215,17 @@ export function CreditDebitNotesListSection({
             render: (value, row) => {
               const note = row as CreditDebitNoteListItem;
               return (
-                <span
-                  className={
-                    note.note_type === "credit"
-                      ? "font-semibold text-emerald-700"
-                      : "font-semibold text-amber-700"
+                <DualCurrencyAmount
+                  amountBs={
+                    (note.note_type === "credit" ? -1 : 1) * Number(value)
                   }
-                >
-                  {note.note_type === "credit" ? "-" : "+"}
-                  {formatCurrency(value as number | string)}
-                </span>
+                  rate={rate}
+                  amountClassName={`font-semibold ${
+                    note.note_type === "credit"
+                      ? "text-emerald-700"
+                      : "text-amber-700"
+                  }`}
+                />
               );
             },
           },

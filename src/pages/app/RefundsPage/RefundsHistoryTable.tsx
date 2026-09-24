@@ -1,14 +1,16 @@
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Table } from "@/components/ui/Table";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
 import { IconEye } from "@/assets/icons";
 
 import { paymentMethods, refundStatuses } from "@/constants/payment-methods";
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
 
 import type { Column } from "@/interfaces/components/ui/TableProps.interface";
 import type { ReturnTransaction } from "@/interfaces/entities/ReturnTransaction.interface";
 
-import { formatCurrency, formatDate } from "./refunds.utils";
+import { formatDate } from "./refunds.utils";
 
 interface RefundsHistoryTableProps {
   returns: ReturnTransaction[];
@@ -19,6 +21,7 @@ export function RefundsHistoryTable({
   returns,
   onViewDetail,
 }: RefundsHistoryTableProps) {
+  const rate = useCurrentExchangeRate();
   const columns: Column[] = [
     {
       key: "return_date",
@@ -47,7 +50,7 @@ export function RefundsHistoryTable({
       label: "Monto",
       width: "10%",
       render: (v: number) => (
-        <span className="font-semibold">{formatCurrency(Number(v))}</span>
+        <DualCurrencyAmount amountBs={Number(v)} rate={rate} bold />
       ),
     },
     {

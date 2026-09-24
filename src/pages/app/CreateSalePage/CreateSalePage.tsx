@@ -769,6 +769,7 @@ export function CreateSalePage() {
         totalAmountDisplay={calc.totalAmountDisplay}
         apartadoAmountDisplay={apartadoAmountDisplay}
         apartadoBalance={apartadoBalance}
+        effectiveExchangeRate={effectiveExchangeRate}
       />
 
       <PaymentSplitsSection

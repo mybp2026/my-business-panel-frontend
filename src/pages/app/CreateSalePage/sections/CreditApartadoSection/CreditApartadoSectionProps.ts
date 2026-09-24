@@ -9,4 +9,5 @@ export interface CreditApartadoSectionProps {
   totalAmountDisplay: number;
   apartadoAmountDisplay: number;
   apartadoBalance: number;
+  effectiveExchangeRate: number;
 }

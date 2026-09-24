@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Table } from "@/components/ui/Table";
 import { ProductVariantComboBox } from "@/components/ui/ProductVariantComboBox";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
 import { IconPlus, IconTrash, IconX } from "@/assets/icons";
 import type { Column } from "@/interfaces/components/ui/TableProps.interface";
 
@@ -76,20 +77,16 @@ export function ItemsSection({
       key: "unit_price",
       label: "Precio",
       width: "15%",
-      render: (_: number, row: CartItem) =>
-        formatAmount(convertCrcToSaleCurrency(row.unit_price), currencySymbol),
+      render: (_: number, row: CartItem) => (
+        <DualCurrencyAmount amountBs={row.unit_price} rate={effectiveExchangeRate} />
+      ),
     },
     {
       key: "total_price",
       label: "Subtotal",
       width: "15%",
       render: (_: number, row: CartItem) => (
-        <span className="font-medium">
-          {formatAmount(
-            convertCrcToSaleCurrency(row.total_price),
-            currencySymbol,
-          )}
-        </span>
+        <DualCurrencyAmount amountBs={row.total_price} rate={effectiveExchangeRate} bold />
       ),
     },
     {

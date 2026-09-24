@@ -55,7 +55,6 @@ import {
 interface PurchaseItemFormRow {
   product_variant_id: string;
   quantity_ordered: string;
-  unit_price: string;
   variant_name?: string;
   sku?: string;
 }
@@ -66,6 +65,7 @@ interface PurchaseFormState {
   expected_delivery_date: string;
   has_invoice: boolean;
   payment_condition: "CREDIT" | "IN_FULL";
+  payment_due_date: string;
   items: PurchaseItemFormRow[];
 }
 
@@ -73,13 +73,13 @@ type PurchaseFormErrors = {
   supplier_id?: string;
   warehouse_id?: string;
   expected_delivery_date?: string;
+  payment_due_date?: string;
   items?: string;
 };
 
 const emptyItem: PurchaseItemFormRow = {
   product_variant_id: "",
   quantity_ordered: "1",
-  unit_price: "",
 };
 
 const emptyForm: PurchaseFormState = {
@@ -88,6 +88,7 @@ const emptyForm: PurchaseFormState = {
   expected_delivery_date: "",
   has_invoice: true,
   payment_condition: "CREDIT",
+  payment_due_date: "",
   items: [{ ...emptyItem }],
 };
 
@@ -100,14 +101,8 @@ export function PurchasesPage() {
     currentTenantName,
     isSuperuser,
     tenants,
-    exchangeRate,
   } = useLoaderData() as PurchasesPageLoaderData;
   const { user } = useAuth();
-
-  // El catálogo de productos (product_variant.unit_price/cost_price) está
-  // en USD; las órdenes de compra siguen operando en Bs., así que el costo
-  // sugerido se convierte al seleccionar el producto (ver handleProductSelect).
-  const effectiveExchangeRate = Number(exchangeRate?.rate ?? 0);
 
   const canManage = user?.role.role_id === 1 || user?.role.role_id === 2;
 
@@ -241,16 +236,18 @@ export function PurchasesPage() {
       nextErrors.expected_delivery_date = "Indique la fecha esperada";
     }
 
+    if (formData.payment_condition === "CREDIT" && !formData.payment_due_date) {
+      nextErrors.payment_due_date =
+        "Indique la fecha límite de pago para órdenes a crédito";
+    }
+
     const validItems = formData.items.filter(
-      (item) =>
-        item.product_variant_id &&
-        Number(item.quantity_ordered) > 0 &&
-        Number(item.unit_price) > 0,
+      (item) => item.product_variant_id && Number(item.quantity_ordered) > 0,
     );
 
     if (validItems.length === 0) {
       nextErrors.items =
-        "Agregue al menos un item completo con producto, cantidad y costo";
+        "Agregue al menos un item completo con producto y cantidad";
     }
 
     setFormErrors(nextErrors);
@@ -269,18 +266,18 @@ export function PurchasesPage() {
         expected_delivery_date: formData.expected_delivery_date,
         has_invoice: formData.has_invoice,
         payment_condition: formData.payment_condition,
+        payment_due_date:
+          formData.payment_condition === "CREDIT"
+            ? formData.payment_due_date
+            : undefined,
         items: formData.items
           .filter(
-            (item) =>
-              item.product_variant_id &&
-              Number(item.quantity_ordered) > 0 &&
-              Number(item.unit_price) > 0,
+            (item) => item.product_variant_id && Number(item.quantity_ordered) > 0,
           )
           .map(
             (item): CreatePurchaseOrderItemRequest => ({
               product_variant_id: item.product_variant_id,
               quantity_ordered: Number(item.quantity_ordered),
-              unit_price: Number(item.unit_price),
             }),
           ),
       };
@@ -319,20 +316,9 @@ export function PurchasesPage() {
     index: number,
     selection: ProductVariantSelection,
   ) => {
-    if (effectiveExchangeRate <= 0) {
-      setToast({
-        mode: "error",
-        message:
-          "No hay tasa de cambio USD → Bs. cargada. No se puede sugerir el costo del producto.",
-      });
-      return;
-    }
-    // selection.unit_price viene del catálogo en USD; se convierte a Bs.
-    // como sugerencia inicial -- el campo sigue editable (es el costo
-    // realmente pactado con el proveedor, puede diferir del catálogo).
-    const suggestedCostInVes = Number(
-      (selection.unit_price * effectiveExchangeRate).toFixed(2),
-    );
+    // El costo unitario ya no se captura aqui: create_purchase_order() lo
+    // resuelve server-side desde general_schema.product_variant.cost_price
+    // (USD) al crear la orden.
     setFormData((prev) => {
       const items = prev.items.map((item, itemIndex) =>
         itemIndex === index
@@ -341,7 +327,6 @@ export function PurchasesPage() {
               product_variant_id: selection.product_variant_id,
               variant_name: selection.variant_name,
               sku: selection.sku,
-              unit_price: String(suggestedCostInVes),
             }
           : item,
       );
@@ -691,6 +676,22 @@ export function PurchasesPage() {
               options={catalogs.payment_conditions}
               required
             />
+
+            {formData.payment_condition === "CREDIT" && (
+              <Input
+                label="Fecha límite de pago"
+                type="date"
+                value={formData.payment_due_date}
+                onChange={(event) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    payment_due_date: event.target.value,
+                  }))
+                }
+                error={formErrors.payment_due_date}
+                required
+              />
+            )}
           </div>
 
           <label className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-amber-50 px-4 py-3 text-sm text-gray-700">
@@ -738,7 +739,7 @@ export function PurchasesPage() {
               {formData.items.map((item, index) => (
                 <div
                   key={`purchase-item-${index}`}
-                  className="grid gap-3 rounded-2xl border border-white bg-white p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] md:grid-cols-[1.8fr_0.7fr_0.8fr_auto]"
+                  className="grid gap-3 rounded-2xl border border-white bg-white p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] md:grid-cols-[1.8fr_0.8fr_auto]"
                 >
                   <ProductVariantComboBox
                     tenantId={user?.tenant.tenant_id || ""}
@@ -773,24 +774,6 @@ export function PurchasesPage() {
                     required
                   />
 
-                  <div>
-                    <Input
-                      label="Costo unitario"
-                      type="number"
-                      min="0.01"
-                      step="0.001"
-                      value={item.unit_price}
-                      onChange={(event) =>
-                        handleItemChange(
-                          index,
-                          "unit_price",
-                          event.target.value,
-                        )
-                      }
-                      required
-                    />
-                  </div>
-
                   <div className="flex items-end">
                     <Button
                       type="button"
@@ -824,42 +807,26 @@ export function PurchasesPage() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
               Resumen rápido
             </p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <SummaryMetric
                 label="Líneas válidas"
                 value={String(
                   formData.items.filter(
                     (item) =>
                       item.product_variant_id &&
-                      Number(item.quantity_ordered) > 0 &&
-                      Number(item.unit_price) > 0,
+                      Number(item.quantity_ordered) > 0,
                   ).length,
                 )}
               />
-              <SummaryMetric
-                label="Subtotal estimado"
-                value={formatCurrency(
-                  formData.items.reduce(
-                    (acc, item) =>
-                      acc +
-                      Number(item.quantity_ordered || 0) *
-                        Number(item.unit_price || 0),
-                    0,
-                  ),
-                )}
-              />
-              <SummaryMetric
-                label="Impuesto estimado"
-                value={formatCurrency(
-                  formData.items.reduce(
-                    (acc, item) =>
-                      acc +
-                      Number(item.quantity_ordered || 0) *
-                        Number(item.unit_price || 0),
-                    0,
-                  ) * 0.16,
-                )}
-              />
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500">
+                  Costo e impuesto
+                </p>
+                <p className="mt-1 text-xs text-gray-600">
+                  Se calculan al confirmar, tomando el costo (USD) configurado
+                  para cada producto en el módulo General.
+                </p>
+              </div>
             </div>
           </div>
 

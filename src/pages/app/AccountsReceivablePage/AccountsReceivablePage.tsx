@@ -14,6 +14,10 @@ import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
 import { Pagination, Table } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
+
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
+import { bsToUsd, formatBs, formatUsd } from "@/utils/dualCurrency";
 
 import {
   IconCheckCircle,
@@ -68,6 +72,7 @@ export function AccountsReceivablePage() {
     tenants,
   } = useLoaderData() as AccountsReceivablePageLoaderData;
   const { user } = useAuth();
+  const usdRate = useCurrentExchangeRate();
 
   const canManage = user?.role.role_id === 1 || user?.role.role_id === 2;
 
@@ -385,9 +390,17 @@ export function AccountsReceivablePage() {
         />
         <StatCard
           label="Saldo pendiente"
-          value={formatCurrency(stats.balance)}
+          value={
+            bsToUsd(stats.balance, usdRate) !== null
+              ? formatUsd(bsToUsd(stats.balance, usdRate)!)
+              : "—"
+          }
           icon={<IconCreditCard />}
-          sublabel="Monto total todavía por cobrar"
+          sublabel={
+            bsToUsd(stats.balance, usdRate) !== null
+              ? `≈ ${formatBs(stats.balance)}`
+              : "Monto total todavía por cobrar (sin tasa)"
+          }
         />
       </section>
 
@@ -469,19 +482,25 @@ export function AccountsReceivablePage() {
               key: "total_amount",
               label: "Total",
               width: "11%",
-              render: (value) => formatCurrency(value as number | string),
+              render: (value) => (
+                <DualCurrencyAmount amountBs={Number(value)} rate={usdRate} />
+              ),
             },
             {
               key: "amount_paid",
               label: "Cobrado",
               width: "11%",
-              render: (value) => formatCurrency(value as number | string),
+              render: (value) => (
+                <DualCurrencyAmount amountBs={Number(value)} rate={usdRate} />
+              ),
             },
             {
               key: "balance_due",
               label: "Pendiente",
               width: "11%",
-              render: (value) => formatCurrency(value as number | string),
+              render: (value) => (
+                <DualCurrencyAmount amountBs={Number(value)} rate={usdRate} bold />
+              ),
             },
             {
               key: "actions",
@@ -540,11 +559,13 @@ export function AccountsReceivablePage() {
                 Venta {selectedReceivable.sale_id}
               </p>
               <p className="mt-3 text-sm text-gray-600">
-                Saldo pendiente actual:{" "}
-                <span className="font-semibold text-gray-900">
-                  {formatCurrency(selectedReceivable.balance_due)}
-                </span>
+                Saldo pendiente actual:
               </p>
+              <DualCurrencyAmount
+                amountBs={Number(selectedReceivable.balance_due)}
+                rate={usdRate}
+                bold
+              />
             </div>
           )}
 
@@ -726,37 +747,50 @@ export function AccountsReceivablePage() {
             <div className="rounded-2xl border border-gray-200 bg-white p-4">
               <div className="flex items-center justify-between py-1">
                 <span className="text-sm text-gray-600">Subtotal</span>
-                <span className="text-sm font-medium text-gray-900">
-                  {formatCurrency(detailReceivable.subtotal)}
-                </span>
+                <DualCurrencyAmount
+                  amountBs={Number(detailReceivable.subtotal)}
+                  rate={usdRate}
+                  align="right"
+                />
               </div>
               <div className="flex items-center justify-between py-1">
                 <span className="text-sm text-gray-600">Impuesto</span>
-                <span className="text-sm font-medium text-gray-900">
-                  {formatCurrency(detailReceivable.tax_amount)}
-                </span>
+                <DualCurrencyAmount
+                  amountBs={Number(detailReceivable.tax_amount)}
+                  rate={usdRate}
+                  align="right"
+                />
               </div>
               <div className="flex items-center justify-between border-t border-gray-100 py-1 pt-2">
                 <span className="text-sm font-semibold text-gray-900">
                   Total
                 </span>
-                <span className="text-sm font-semibold text-gray-900">
-                  {formatCurrency(detailReceivable.total_amount)}
-                </span>
+                <DualCurrencyAmount
+                  amountBs={Number(detailReceivable.total_amount)}
+                  rate={usdRate}
+                  bold
+                  align="right"
+                />
               </div>
               <div className="flex items-center justify-between py-1">
                 <span className="text-sm text-gray-600">Cobrado</span>
-                <span className="text-sm font-medium text-green-600">
-                  {formatCurrency(detailReceivable.amount_paid)}
-                </span>
+                <DualCurrencyAmount
+                  amountBs={Number(detailReceivable.amount_paid)}
+                  rate={usdRate}
+                  amountClassName="font-medium text-green-600"
+                  align="right"
+                />
               </div>
               <div className="flex items-center justify-between py-1">
                 <span className="text-sm font-semibold text-gray-900">
                   Saldo pendiente
                 </span>
-                <span className="text-sm font-semibold text-blue-700">
-                  {formatCurrency(detailReceivable.balance_due)}
-                </span>
+                <DualCurrencyAmount
+                  amountBs={Number(detailReceivable.balance_due)}
+                  rate={usdRate}
+                  amountClassName="font-semibold text-blue-700"
+                  align="right"
+                />
               </div>
             </div>
 

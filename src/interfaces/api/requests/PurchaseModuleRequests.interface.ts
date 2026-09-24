@@ -15,7 +15,6 @@ export interface UpdateSupplierRequest {
 export interface CreatePurchaseOrderItemRequest {
   product_variant_id: string;
   quantity_ordered: number;
-  unit_price: number;
 }
 
 export interface CreatePurchaseOrderRequest {
@@ -24,6 +23,8 @@ export interface CreatePurchaseOrderRequest {
   expected_delivery_date: string;
   has_invoice?: boolean;
   payment_condition?: "CREDIT" | "IN_FULL";
+  /** Obligatoria cuando payment_condition es CREDIT; ignorada para IN_FULL. */
+  payment_due_date?: string;
   items: CreatePurchaseOrderItemRequest[];
 }
 
@@ -41,4 +42,25 @@ export interface UpsertPaymentAlertConfigRequest {
   urgent_days_before_due: number;
   email_notifications_enabled: boolean;
   sms_notifications_enabled: boolean;
+}
+
+export interface UpdateSupplierInvoiceItemRequest {
+  product_variant_id: string;
+  quantity_billed: number;
+  unit_price: number;
+}
+
+export interface UpdateSupplierInvoiceRequest {
+  items: UpdateSupplierInvoiceItemRequest[];
+}
+
+export interface CreatePurchaseDisputeRequest {
+  purchase_order_id: string;
+  supplier_invoice_id?: string;
+  dispute_type: "MISSING_GOODS" | "PRICE_MISMATCH";
+  description: string;
+}
+
+export interface ResolvePurchaseDisputeRequest {
+  resolution_notes: string;
 }
