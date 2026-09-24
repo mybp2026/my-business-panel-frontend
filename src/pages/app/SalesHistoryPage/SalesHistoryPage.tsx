@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { Table, Pagination } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
 
@@ -43,6 +44,8 @@ export function SalesHistoryPage() {
 
   const [branchId, setBranchId] = useState(initialBranchId);
   const [page, setPage] = useState(initialSales.page ?? 1);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [sales, setSales] = useState<SaleListItem[]>(
     [...(initialSales.results ?? [])].sort(
       (a, b) =>
@@ -99,10 +102,25 @@ export function SalesHistoryPage() {
     }
     let cancelled = false;
     setIsLoading(true);
+    // dateTo es un input tipo date (sin hora): agregamos el limite del dia
+    // para que incluya las ventas de esa fecha completa, no solo hasta
+    // medianoche.
+    const dateToBoundary = dateTo ? `${dateTo}T23:59:59.999` : undefined;
     const fetchFn =
       branchId === "all"
-        ? getSalesByTenant(page, SALES_PAGE_LIMIT)
-        : getSalesByBranch(branchId, page, SALES_PAGE_LIMIT);
+        ? getSalesByTenant(
+            page,
+            SALES_PAGE_LIMIT,
+            dateFrom || undefined,
+            dateToBoundary,
+          )
+        : getSalesByBranch(
+            branchId,
+            page,
+            SALES_PAGE_LIMIT,
+            dateFrom || undefined,
+            dateToBoundary,
+          );
     fetchFn
       .then((res) => {
         if (cancelled) return;
@@ -127,7 +145,7 @@ export function SalesHistoryPage() {
     return () => {
       cancelled = true;
     };
-  }, [branchId, page]);
+  }, [branchId, page, dateFrom, dateTo]);
 
   if (!canView) {
     return (
@@ -255,6 +273,41 @@ export function SalesHistoryPage() {
               onChange={(e) => setSearchId(e.target.value)}
             />
           </div>
+          <div className="flex-1 max-w-[10rem]">
+            <Input
+              label="Desde"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => {
+                setDateFrom(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="flex-1 max-w-[10rem]">
+            <Input
+              label="Hasta"
+              type="date"
+              value={dateTo}
+              onChange={(e) => {
+                setDateTo(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          {(dateFrom || dateTo) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setDateFrom("");
+                setDateTo("");
+                setPage(1);
+              }}
+            >
+              Limpiar fechas
+            </Button>
+          )}
           <div className="text-sm text-gray-500 md:ml-auto">
             {filteredSales.length} de {total} venta{total !== 1 ? "s" : ""}
           </div>

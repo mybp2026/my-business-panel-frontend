@@ -58,10 +58,20 @@ export const saleApi = {
     branchId: string,
     page = 1,
     limit = 100,
+    dateFrom?: string,
+    dateTo?: string,
   ): Promise<PaginatedResponse<SaleListItem>> {
     try {
+      const offset = (page - 1) * limit;
+      const params = new URLSearchParams({
+        limit: String(limit),
+        offset: String(offset),
+      });
+      if (dateFrom) params.set("date_from", dateFrom);
+      if (dateTo) params.set("date_to", dateTo);
+
       const response = await fetch(
-        `${url}/sale/${branchId}?page=${page}&limit=${limit}`,
+        `${url}/sale/${branchId}?${params.toString()}`,
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },
@@ -96,11 +106,20 @@ export const saleApi = {
   async listByTenant(
     page = 1,
     limit = 100,
+    dateFrom?: string,
+    dateTo?: string,
   ): Promise<PaginatedResponse<SaleListItem>> {
     try {
       const offset = (page - 1) * limit;
+      const params = new URLSearchParams({
+        limit: String(limit),
+        offset: String(offset),
+      });
+      if (dateFrom) params.set("date_from", dateFrom);
+      if (dateTo) params.set("date_to", dateTo);
+
       const response = await fetch(
-        `${url}/sale/tenant/all?limit=${limit}&offset=${offset}`,
+        `${url}/sale/tenant/all?${params.toString()}`,
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },
