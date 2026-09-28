@@ -2,6 +2,7 @@ import { url } from ".";
 
 import type { ApiResponse } from "@/interfaces/api/ApiResponse.interface";
 import type {
+  ApplySupplierCreditRequest,
   CreatePurchaseDisputeRequest,
   CreatePurchaseOrderRequest,
   CreatePurchasePaymentRequest,
@@ -23,6 +24,7 @@ import type {
   PurchaseOrder,
   PurchaseOrderDetail,
   Supplier,
+  SupplierCredit,
 } from "@/interfaces/entities/Purchase.interface";
 
 const json = async <T>(res: Response, fallback: string): Promise<T> => {
@@ -202,6 +204,33 @@ export const purchaseApi = {
     });
 
     return json<PurchaseDispute>(res, "Error al resolver la discrepancia");
+  },
+
+  async listSupplierCredits(supplierId: string): Promise<SupplierCredit[]> {
+    const res = await fetch(
+      withQuery(`${url}/purchase/supplier-credits`, { supplier_id: supplierId }),
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      },
+    );
+
+    return json<SupplierCredit[]>(res, "Error al listar créditos del proveedor");
+  },
+
+  async applySupplierCredit(
+    creditId: string,
+    data: ApplySupplierCreditRequest,
+  ): Promise<PurchaseOrderDetail> {
+    const res = await fetch(`${url}/purchase/supplier-credits/${creditId}/apply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    return json<PurchaseOrderDetail>(res, "Error al aplicar el crédito del proveedor");
   },
 
   async getMatching(orderId: string): Promise<PurchaseMatching> {

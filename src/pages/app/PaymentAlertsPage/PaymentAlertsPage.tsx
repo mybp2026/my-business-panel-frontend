@@ -35,6 +35,9 @@ import {
   formatDateTime,
   getAlertTone,
 } from "@/utils/purchase";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
+import { formatBs, usdToBs } from "@/utils/dualCurrency";
 
 const defaultConfig: UpsertPaymentAlertConfigRequest = {
   warning_days_before_due: 7,
@@ -54,6 +57,7 @@ export function PaymentAlertsPage() {
     tenants,
   } = useLoaderData() as PaymentAlertsPageLoaderData;
   const { user } = useAuth();
+  const displayRate = useCurrentExchangeRate();
 
   const canManage = user?.role.role_id === 1 || user?.role.role_id === 2;
 
@@ -273,7 +277,11 @@ export function PaymentAlertsPage() {
           label="Monto en riesgo"
           value={formatCurrency(stats.total_amount_at_risk)}
           icon={<IconCreditCard />}
-          sublabel="Saldo pendiente con alerta"
+          sublabel={
+            displayRate
+              ? `≈ ${formatBs(usdToBs(Number(stats.total_amount_at_risk), displayRate) ?? 0)}`
+              : "Saldo pendiente con alerta"
+          }
         />
       </section>
 
@@ -440,7 +448,9 @@ export function PaymentAlertsPage() {
                   key: "balance_remaining",
                   label: "Saldo",
                   width: "12%",
-                  render: (value) => formatCurrency(value as number | string),
+                  render: (value) => (
+                    <DualCurrencyAmount amountUsd={Number(value)} rate={displayRate} />
+                  ),
                 },
                 {
                   key: "alert_date",

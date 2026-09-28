@@ -64,3 +64,7 @@ export interface CreatePurchaseDisputeRequest {
 export interface ResolvePurchaseDisputeRequest {
   resolution_notes: string;
 }
+
+export interface ApplySupplierCreditRequest {
+  purchase_account_payable_id: string;
+}

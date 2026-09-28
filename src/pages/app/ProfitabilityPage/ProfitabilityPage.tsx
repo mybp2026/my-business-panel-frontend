@@ -13,6 +13,7 @@ import {
 
 import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
+import { FinanceRateBadge } from "@/components/finances/FinanceRateBadge";
 import { IconTrendingUp, IconCreditCard, IconCheckCircle } from "@/assets/icons";
 
 import { profitabilityApi } from "@/api/profitability.api";
@@ -29,6 +30,45 @@ import type {
   ProfitabilityRawData,
   ProfitabilitySeries,
 } from "@/interfaces/entities/Profitability.interface";
+
+// Desglose de gastos usados en el calculo de UN, con la utilidad neta final.
+function ExpenseBreakdown({
+  series,
+  fmt,
+}: {
+  series: ProfitabilitySeries;
+  fmt: (value: number) => string;
+}) {
+  if (series.expense_breakdown.length === 0) {
+    return (
+      <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-400">
+        Sin gastos registrados en el periodo seleccionado
+      </div>
+    );
+  }
+  return (
+    <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        Desglose de gastos considerados
+      </p>
+      <ul className="flex flex-col gap-1.5">
+        {series.expense_breakdown.map((c) => (
+          <li
+            key={c.category_id ?? "uncategorized"}
+            className="flex items-center justify-between text-sm"
+          >
+            <span className="text-gray-600">{c.category_name}</span>
+            <span className="font-medium text-gray-900">{fmt(c.amount)}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-2 flex items-center justify-between border-t border-gray-200 pt-2 text-sm font-semibold">
+        <span className="text-gray-700">Utilidad neta final</span>
+        <span className="text-gray-900">{fmt(series.total_un)}</span>
+      </div>
+    </div>
+  );
+}
 
 function fmtPct(value: number): string {
   return `${value.toFixed(2)} %`;
@@ -159,13 +199,16 @@ export function ProfitabilityPage() {
               periodo seleccionado.
             </p>
           </div>
-          <div className="rounded-2xl border border-white/80 bg-white/85 px-4 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
-              Contexto principal
-            </p>
-            <p className="mt-1 text-sm font-medium text-gray-900">
-              {currentTenantName}
-            </p>
+          <div className="flex flex-col items-end gap-2">
+            <FinanceRateBadge />
+            <div className="rounded-2xl border border-white/80 bg-white/85 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+                Contexto principal
+              </p>
+              <p className="mt-1 text-sm font-medium text-gray-900">
+                {currentTenantName}
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -254,6 +297,7 @@ export function ProfitabilityPage() {
           Margen bruto y neto consolidado de todas las sucursales.
         </p>
         <MarginChart points={result.general.points} />
+        <ExpenseBreakdown series={result.general} fmt={fmt} />
       </section>
 
       {/* Graficos por sucursal */}
@@ -282,6 +326,7 @@ export function ProfitabilityPage() {
               </div>
             </div>
             <MarginChart points={branch.points} />
+            <ExpenseBreakdown series={branch} fmt={fmt} />
           </div>
         ))}
       </section>

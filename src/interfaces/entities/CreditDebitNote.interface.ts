@@ -39,4 +39,7 @@ export interface CreateCreditDebitNotePayload {
   description?: string;
   amount: number;
   currency_id?: number;
+  /** Requerido cuando reason_kind es "mercancia_danada" y note_type "credit"
+   *  -- genera un credito de proveedor aplicable en Compras. */
+  supplier_id?: string;
 }

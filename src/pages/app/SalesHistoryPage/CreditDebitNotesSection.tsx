@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { creditDebitNoteApi } from "@/api";
+import { purchaseApi } from "@/api/purchase.api";
 
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -19,6 +20,7 @@ import type {
   CreditDebitNoteReasonKind,
   CreditDebitNoteType,
 } from "@/interfaces/entities/CreditDebitNote.interface";
+import type { Supplier } from "@/interfaces/entities/Purchase.interface";
 
 interface CreditDebitNotesSectionProps {
   invoiceId: string;
@@ -60,7 +62,17 @@ export function CreditDebitNotesSection({
     reason_kind: "devolucion" as CreditDebitNoteReasonKind,
     amount: "",
     description: "",
+    supplier_id: "",
   });
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const requiresSupplier =
+    form.reason_kind === "mercancia_danada" && form.note_type === "credit";
+
+  useEffect(() => {
+    if (!requiresSupplier || suppliers.length > 0) return;
+    purchaseApi.listSuppliers().then(setSuppliers).catch(() => setSuppliers([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requiresSupplier]);
 
   const reload = async () => {
     setIsLoading(true);
@@ -87,6 +99,13 @@ export function CreditDebitNotesSection({
       setToast({ mode: "error", message: "Ingresa un monto válido" });
       return;
     }
+    if (requiresSupplier && !form.supplier_id) {
+      setToast({
+        mode: "error",
+        message: "Selecciona el proveedor a acreditar por la mercancía dañada",
+      });
+      return;
+    }
     setIsSubmitting(true);
     try {
       await creditDebitNoteApi.create({
@@ -95,12 +114,14 @@ export function CreditDebitNotesSection({
         reason_kind: form.reason_kind,
         amount,
         description: form.description.trim() || undefined,
+        supplier_id: requiresSupplier ? form.supplier_id : undefined,
       });
       setForm({
         note_type: "credit",
         reason_kind: "devolucion",
         amount: "",
         description: "",
+        supplier_id: "",
       });
       setShowForm(false);
       await reload();
@@ -198,6 +219,22 @@ export function CreditDebitNotesSection({
               }
               hint="Ej: 1 unidad dañada en transporte"
             />
+            {requiresSupplier && (
+              <Select
+                label="Proveedor a acreditar"
+                value={form.supplier_id}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, supplier_id: e.target.value }))
+                }
+                options={suppliers.map((s) => ({
+                  value: s.supplier_id,
+                  label: s.supplier_name,
+                }))}
+                placeholder="Selecciona un proveedor"
+                hint="El monto queda disponible como crédito en Compras para la próxima orden a este proveedor"
+                required
+              />
+            )}
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setShowForm(false)}>

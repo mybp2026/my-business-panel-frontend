@@ -3,11 +3,46 @@ import type { ExchangeRate } from "@/interfaces/entities/ExchangeRate.interface"
 import type {
   BranchProfitability,
   BucketUnit,
+  ExpenseCategoryBreakdown,
   ProfitabilityPoint,
   ProfitabilityRawData,
   ProfitabilityResult,
   ProfitabilitySeries,
 } from "@/interfaces/entities/Profitability.interface";
+
+const UNCATEGORIZED_LABEL = "Sin categoria";
+
+// Acumulador de gastos por categoria (clave = category_id o "uncategorized").
+interface CategoryAccumulator {
+  category_id: string | null;
+  category_name: string;
+  amount: number;
+}
+
+function addToCategoryMap(
+  map: Map<string, CategoryAccumulator>,
+  categoryId: string | null,
+  categoryName: string | null,
+  amount: number,
+) {
+  const key = categoryId ?? "uncategorized";
+  const existing = map.get(key);
+  if (existing) {
+    existing.amount += amount;
+  } else {
+    map.set(key, {
+      category_id: categoryId,
+      category_name: categoryName ?? UNCATEGORIZED_LABEL,
+      amount,
+    });
+  }
+}
+
+function breakdownFromMap(
+  map: Map<string, CategoryAccumulator>,
+): ExpenseCategoryBreakdown[] {
+  return Array.from(map.values()).sort((a, b) => b.amount - a.amount);
+}
 
 // Componentes monetarios acumulados de un (sucursal, bucket), ya en moneda destino.
 interface BucketAccumulator {
@@ -76,6 +111,7 @@ function computePoint(
 function seriesFromBuckets(
   buckets: Map<string, BucketAccumulator>,
   unit: BucketUnit,
+  expenseBreakdown: ExpenseCategoryBreakdown[],
 ): ProfitabilitySeries {
   const points = Array.from(buckets.entries())
     .sort(([a], [b]) => a.localeCompare(b))
@@ -86,6 +122,7 @@ function seriesFromBuckets(
     total_vn: points.reduce((s, p) => s + p.vn, 0),
     total_ub: points.reduce((s, p) => s + p.ub, 0),
     total_un: points.reduce((s, p) => s + p.un, 0),
+    expense_breakdown: expenseBreakdown,
   };
 }
 
@@ -163,13 +200,35 @@ export function computeProfitability(
     }
   }
 
-  const generalSeries = seriesFromBuckets(general, unit);
+  // Desglose de gastos por categoria, acumulado sobre todo el periodo
+  // (no por bucket) -- se muestra como tabla/lista debajo de cada grafica.
+  const byBranchCategory = new Map<string, Map<string, CategoryAccumulator>>();
+  const generalCategory = new Map<string, CategoryAccumulator>();
+
+  for (const row of raw.expense_categories) {
+    const amount = toTarget(Number(row.amount), row.currency_id);
+
+    let branchMap = byBranchCategory.get(row.branch_id);
+    if (!branchMap) {
+      branchMap = new Map();
+      byBranchCategory.set(row.branch_id, branchMap);
+    }
+    addToCategoryMap(branchMap, row.category_id, row.category_name, amount);
+    addToCategoryMap(generalCategory, row.category_id, row.category_name, amount);
+  }
+
+  const generalSeries = seriesFromBuckets(
+    general,
+    unit,
+    breakdownFromMap(generalCategory),
+  );
   const tenantUn = generalSeries.total_un;
 
   // Una serie por sucursal (incluye sedes sin ventas -> serie vacia).
   const branches: BranchProfitability[] = raw.branches.map((b) => {
     const buckets = byBranch.get(b.branch_id) ?? new Map();
-    const series = seriesFromBuckets(buckets, unit);
+    const categoryMap = byBranchCategory.get(b.branch_id) ?? new Map();
+    const series = seriesFromBuckets(buckets, unit, breakdownFromMap(categoryMap));
     return {
       branch_id: b.branch_id,
       branch_name: b.branch_name,

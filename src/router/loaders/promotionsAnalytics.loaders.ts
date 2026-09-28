@@ -1,19 +1,24 @@
 import { authApi } from "@/api/auth.api";
 import { promotionApi } from "@/api/promotion.api";
 import { royaltyApi } from "@/api/royalty.api";
+import { loyaltyFinanceApi } from "@/api/loyaltyFinance.api";
 import { currencyApi } from "@/api/currency.api";
 import { exchangeRateApi } from "@/api/exchangeRate.api";
 import { branchApi } from "@/api/branch.api";
 import { DEFAULT_PROMO_INTERVAL } from "@/constants/promotion";
+import { DEFAULT_LOYALTY_INTERVAL } from "@/constants/loyaltyFinance";
+import { emptyOverview } from "./loyaltyFinance.loaders";
 import type { PromoAnalyticsRow, PromoInterval } from "@/interfaces/entities/Promotion.interface";
 import type { Currency } from "@/interfaces/entities/Currency.interface";
 import type { ExchangeRate } from "@/interfaces/entities/ExchangeRate.interface";
 import type { Branch } from "@/interfaces/entities/Branch.interface";
 import type { RoyaltyAnalytics } from "@/interfaces/entities/RoyaltyAnalytics.interface";
+import type { LoyaltyOverview } from "@/interfaces/entities/LoyaltyFinance.interface";
 
 export interface PromotionsAnalyticsLoaderData {
   rows: PromoAnalyticsRow[];
   royalty: RoyaltyAnalytics | null;
+  loyalty: LoyaltyOverview;
   currencies: Currency[];
   exchangeRates: ExchangeRate[];
   branches: Branch[];
@@ -26,7 +31,7 @@ export async function getPromotionsAnalyticsPageData(): Promise<PromotionsAnalyt
   const tenantId = user?.tenant?.tenant_id ?? "";
   const interval = DEFAULT_PROMO_INTERVAL;
 
-  const [rows, royalty, currencies, exchangeRates, branchRes] =
+  const [rows, royalty, loyalty, currencies, exchangeRates, branchRes] =
     await Promise.all([
       tenantId
         ? promotionApi.getAnalytics(tenantId, interval)
@@ -34,6 +39,9 @@ export async function getPromotionsAnalyticsPageData(): Promise<PromotionsAnalyt
       tenantId
         ? royaltyApi.getAnalytics(tenantId, interval).catch(() => null)
         : Promise.resolve(null),
+      loyaltyFinanceApi
+        .getOverview(DEFAULT_LOYALTY_INTERVAL)
+        .catch(() => emptyOverview),
       currencyApi.getAll(),
       exchangeRateApi.getAll(),
       tenantId
@@ -44,6 +52,7 @@ export async function getPromotionsAnalyticsPageData(): Promise<PromotionsAnalyt
   return {
     rows,
     royalty,
+    loyalty,
     currencies,
     exchangeRates,
     branches: branchRes.branches,
