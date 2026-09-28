@@ -13,6 +13,10 @@ import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
 import { Table } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
+
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
+import { formatBs, usdToBs } from "@/utils/dualCurrency";
 
 import {
   IconCheckCircle,
@@ -70,6 +74,10 @@ export function AccountsPayablePage() {
     tenants,
   } = useLoaderData() as AccountsPayablePageLoaderData;
   const { user } = useAuth();
+  // Tasa para mostrar USD -> Bs. en paralelo (igual que POS/Ventas). Distinta
+  // del `exchangeRate` de mas abajo, que es para el conversor en vivo del
+  // formulario de abono en moneda distinta a USD.
+  const displayRate = useCurrentExchangeRate();
 
   const canManage = user?.role.role_id === 1 || user?.role.role_id === 2;
 
@@ -446,7 +454,11 @@ export function AccountsPayablePage() {
           label="Saldo pendiente"
           value={formatCurrency(stats.balance)}
           icon={<IconCreditCard />}
-          sublabel="Monto total todavía por cubrir"
+          sublabel={
+            displayRate
+              ? `≈ ${formatBs(usdToBs(stats.balance, displayRate) ?? 0)}`
+              : "Monto total todavía por cubrir"
+          }
         />
       </section>
 
@@ -530,19 +542,25 @@ export function AccountsPayablePage() {
               key: "total_amount",
               label: "Total",
               width: "11%",
-              render: (value) => formatCurrency(value as number | string),
+              render: (value) => (
+                <DualCurrencyAmount amountUsd={Number(value)} rate={displayRate} />
+              ),
             },
             {
               key: "amount_paid",
               label: "Abonado",
               width: "11%",
-              render: (value) => formatCurrency(value as number | string),
+              render: (value) => (
+                <DualCurrencyAmount amountUsd={Number(value)} rate={displayRate} />
+              ),
             },
             {
               key: "balance_due",
               label: "Pendiente",
               width: "11%",
-              render: (value) => formatCurrency(value as number | string),
+              render: (value) => (
+                <DualCurrencyAmount amountUsd={Number(value)} rate={displayRate} bold />
+              ),
             },
             ...(isSuperuser
               ? [
@@ -609,7 +627,16 @@ export function AccountsPayablePage() {
                 Saldo pendiente actual:{" "}
                 <span className="font-semibold text-gray-900">
                   {formatCurrency(selectedPayable.balance_due)}
-                </span>
+                </span>{" "}
+                {displayRate && (
+                  <span className="font-semibold text-gray-500">
+                    (≈{" "}
+                    {formatBs(
+                      usdToBs(Number(selectedPayable.balance_due), displayRate) ?? 0,
+                    )}
+                    )
+                  </span>
+                )}
               </p>
             </div>
           )}

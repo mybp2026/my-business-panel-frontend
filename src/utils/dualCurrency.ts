@@ -22,3 +22,14 @@ export const bsToUsd = (
   if (!rate || rate <= 0) return null;
   return Math.round((amountBs / rate) * 100) / 100;
 };
+
+/** Convierte un monto en dolares (moneda base de Compras/CxP, ver
+ *  utils/purchase.ts BASE_CURRENCY) a su equivalente en bolivares usando la
+ *  tasa vigente. Null si no hay tasa. */
+export const usdToBs = (
+  amountUsd: number,
+  rate: number | null | undefined,
+): number | null => {
+  if (!rate || rate <= 0) return null;
+  return Math.round(amountUsd * rate * 100) / 100;
+};

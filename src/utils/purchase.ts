@@ -45,8 +45,15 @@ export const BASE_CURRENCY: Currency = {
   symbol: "$",
 };
 
+// No usa formatInCurrency/Intl currency-style: Intl.NumberFormat("es-VE",
+// {currency:"USD"}) renderiza "USD 1.234,50", no "$" -- Compras siempre
+// muestra USD como "$", igual que el resto del sistema (ver
+// src/utils/dualCurrency.ts formatUsd).
 export const formatCurrency = (value?: NumericLike | null) =>
-  formatInCurrency(Number(value ?? 0), BASE_CURRENCY);
+  `$ ${Number(value ?? 0).toLocaleString("es-VE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
 export const formatDate = (value?: string | null) =>
   value ? new Date(value).toLocaleDateString("es-VE") : "—";

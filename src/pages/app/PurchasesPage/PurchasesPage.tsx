@@ -17,6 +17,10 @@ import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
 import { Table } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
+
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
+import { formatBs, usdToBs } from "@/utils/dualCurrency";
 
 import {
   IconCalendar,
@@ -103,6 +107,7 @@ export function PurchasesPage() {
     tenants,
   } = useLoaderData() as PurchasesPageLoaderData;
   const { user } = useAuth();
+  const rate = useCurrentExchangeRate();
 
   const canManage = user?.role.role_id === 1 || user?.role.role_id === 2;
 
@@ -461,7 +466,11 @@ export function PurchasesPage() {
         <StatCard
           label="Pendiente por pagar"
           value={formatCurrency(stats.outstanding)}
-          sublabel="Saldo vivo de las órdenes filtradas"
+          sublabel={
+            rate
+              ? `≈ ${formatBs(usdToBs(stats.outstanding, rate) ?? 0)}`
+              : "Saldo vivo de las órdenes filtradas"
+          }
           icon={<IconPackage />}
         />
       </section>
@@ -547,13 +556,17 @@ export function PurchasesPage() {
               key: "total_amount",
               label: "Total",
               width: "12%",
-              render: (value) => formatCurrency(value as number | string),
+              render: (value) => (
+                <DualCurrencyAmount amountUsd={Number(value)} rate={rate} />
+              ),
             },
             {
               key: "balance_due",
               label: "Pendiente",
               width: "12%",
-              render: (value) => formatCurrency(value as number | string),
+              render: (value) => (
+                <DualCurrencyAmount amountUsd={Number(value)} rate={rate} bold />
+              ),
             },
             {
               key: "expected_delivery_date",
