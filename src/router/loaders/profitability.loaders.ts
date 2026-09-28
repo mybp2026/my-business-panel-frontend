@@ -30,7 +30,7 @@ const emptyRaw: ProfitabilityRawData = {
   expense_categories: [],
 };
 
-export const getProfitabilityPageData =
+const fetchProfitabilityPageData =
   async (): Promise<ProfitabilityPageLoaderData> =>
     withAuthCheck(async () => {
       const currentUser = await authApi.getCurrentUser();
@@ -59,3 +59,12 @@ export const getProfitabilityPageData =
         currentTenantName,
       };
     });
+
+/**
+ * Carga diferida: el loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getProfitabilityPageData = () => ({
+  data: fetchProfitabilityPageData(),
+});

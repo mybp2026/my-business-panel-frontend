@@ -26,7 +26,7 @@ export interface PromotionsAnalyticsLoaderData {
   interval: PromoInterval;
 }
 
-export async function getPromotionsAnalyticsPageData(): Promise<PromotionsAnalyticsLoaderData> {
+async function fetchPromotionsAnalyticsPageData(): Promise<PromotionsAnalyticsLoaderData> {
   const user = await authApi.getCurrentUser();
   const tenantId = user?.tenant?.tenant_id ?? "";
   const interval = DEFAULT_PROMO_INTERVAL;
@@ -60,3 +60,12 @@ export async function getPromotionsAnalyticsPageData(): Promise<PromotionsAnalyt
     interval,
   };
 }
+
+/**
+ * Carga diferida: el loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getPromotionsAnalyticsPageData = () => ({
+  data: fetchPromotionsAnalyticsPageData(),
+});

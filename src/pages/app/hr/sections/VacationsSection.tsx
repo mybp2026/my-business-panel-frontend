@@ -8,9 +8,12 @@ import { Input } from "@/components/ui/Input";
 import { StatCard } from "@/components/ui/StatCard";
 import { Table } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
 import { useHrEmployee } from "@/context/HrEmployeeContext";
 
 import { IconCalendar } from "@/assets/icons";
+
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
 
 import type { Column } from "@/interfaces/components/ui/TableProps.interface";
 import type { ToastMode } from "@/interfaces/components/ui/ToastProps.interface";
@@ -23,14 +26,6 @@ const todayIso = () => new Date().toISOString().slice(0, 10);
 
 const formatDays = (value: number | string) =>
   Number(value).toLocaleString("es-VE", { maximumFractionDigits: 2 });
-
-const formatAmount = (value: number | string | null) =>
-  value === null
-    ? "—"
-    : Number(value).toLocaleString("es-VE", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
 
 const STATUS_VARIANT: Record<
   HrVacationPeriod["status"],
@@ -51,6 +46,7 @@ const STATUS_LABEL: Record<HrVacationPeriod["status"], string> = {
 
 export function VacationsSection() {
   const { employeeId } = useHrEmployee();
+  const usdRate = useCurrentExchangeRate();
 
   const [entitlement, setEntitlement] = useState<HrVacationEntitlement | null>(
     null,
@@ -201,9 +197,12 @@ export function VacationsSection() {
       key: "paid_amount",
       label: "Monto pagado",
       width: "14%",
-      render: (value: number | string | null) => (
-        <span className="font-mono">{formatAmount(value)}</span>
-      ),
+      render: (value: number | string | null) =>
+        value === null ? (
+          "—"
+        ) : (
+          <DualCurrencyAmount amountBs={Number(value)} rate={usdRate} hideSecondary />
+        ),
     },
     {
       key: "actions",

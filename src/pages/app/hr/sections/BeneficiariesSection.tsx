@@ -8,9 +8,14 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Table } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
 import { useHrEmployee } from "@/context/HrEmployeeContext";
 
 import { IconPlus } from "@/assets/icons";
+
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
+import { useDisplayCurrency } from "@/context/CurrencyContext";
+import { bsToUsd, formatBs, formatUsd } from "@/utils/dualCurrency";
 
 import type { Column } from "@/interfaces/components/ui/TableProps.interface";
 import type { ToastMode } from "@/interfaces/components/ui/ToastProps.interface";
@@ -46,6 +51,18 @@ const RELATIONSHIP_LABEL: Record<HrBeneficiaryRelationship, string> = {
 
 export function BeneficiariesSection() {
   const { employeeId } = useHrEmployee();
+  const usdRate = useCurrentExchangeRate();
+  const { displayCurrency } = useDisplayCurrency();
+
+  const formatDisplayAmount = (value: number | string | null | undefined) => {
+    if (value === null || value === undefined) return "—";
+    const bs = Number(value);
+    return displayCurrency === "VES"
+      ? formatBs(bs)
+      : bsToUsd(bs, usdRate) !== null
+        ? formatUsd(bsToUsd(bs, usdRate)!)
+        : "—";
+  };
 
   const [beneficiaries, setBeneficiaries] = useState<HrEmployeeBeneficiary[]>(
     [],
@@ -181,10 +198,7 @@ export function BeneficiariesSection() {
         mode: "success",
         message: `Repartido entre ${result.count} beneficiarios validados: ${Number(
           result.sharePercentage,
-        ).toFixed(2)}% cada uno (${Number(result.shareAmount).toLocaleString(
-          "es-VE",
-          { minimumFractionDigits: 2 },
-        )} por cabeza)`,
+        ).toFixed(2)}% cada uno (${formatDisplayAmount(result.shareAmount)} por cabeza)`,
       });
     } catch (error) {
       setToast({
@@ -221,15 +235,12 @@ export function BeneficiariesSection() {
       key: "share_amount",
       label: "Monto",
       width: "16%",
-      render: (value: number | string | null) => (
-        <span className="font-mono">
-          {value
-            ? Number(value).toLocaleString("es-VE", {
-                minimumFractionDigits: 2,
-              })
-            : "—"}
-        </span>
-      ),
+      render: (value: number | string | null) =>
+        value ? (
+          <DualCurrencyAmount amountBs={Number(value)} rate={usdRate} hideSecondary />
+        ) : (
+          "—"
+        ),
     },
     {
       key: "validated",
@@ -262,9 +273,7 @@ export function BeneficiariesSection() {
   const settlementOptions = settlements.length
     ? settlements.map((s) => ({
         value: s.settlement_id,
-        label: `${s.termination_date.slice(0, 10)} · ${Number(
-          s.total ?? 0,
-        ).toLocaleString("es-VE", { minimumFractionDigits: 2 })}`,
+        label: `${s.termination_date.slice(0, 10)} · ${formatDisplayAmount(s.total ?? 0)}`,
       }))
     : [{ value: "", label: "Sin liquidaciones pendientes de reparto" }];
 

@@ -2,10 +2,8 @@ import { useState, type ReactNode } from "react";
 
 import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
-import {
-  HrEmployeeProvider,
-  useHrEmployee,
-} from "@/context/HrEmployeeContext";
+import { PageHeaderBanner } from "@/components/layout/PageHeaderBanner";
+import { HrEmployeeProvider, useHrEmployee } from "@/context/HrEmployeeContext";
 
 export interface HrTab {
   id: string;
@@ -34,10 +32,7 @@ function HrTabbedPageContent({ title, description, tabs }: HrTabbedPageProps) {
 
   return (
     <div className="p-6 lg:p-8">
-      <div className="mb-6">
-        <h1 className="mb-2 text-3xl font-bold text-gray-900">{title}</h1>
-        <p className="text-gray-600">{description}</p>
-      </div>
+      <PageHeaderBanner eyebrow="HR" title={title} description={description} />
 
       <div className="mb-6">
         <Tabs
@@ -74,7 +69,7 @@ function HrTabbedPageContent({ title, description, tabs }: HrTabbedPageProps) {
 }
 
 /**
- * Cascaron comun de los modulos de RRHH: titulo, pestanas y — cuando
+ * Cascaron comun de los modulos de HR: titulo, pestanas y — cuando
  * la pestana activa lo necesita — un unico selector de empleado
  * compartido entre todas.
  */

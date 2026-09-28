@@ -14,7 +14,7 @@ export interface RoyaltiesPageLoaderData {
   tenantId: string;
 }
 
-export const getRoyaltiesPageData = async (): Promise<RoyaltiesPageLoaderData> => {
+const fetchRoyaltiesPageData = async (): Promise<RoyaltiesPageLoaderData> => {
   const user = await authApi.getCurrentUser();
   const tenantId = user?.tenant?.tenant_id ?? "";
 
@@ -26,3 +26,12 @@ export const getRoyaltiesPageData = async (): Promise<RoyaltiesPageLoaderData> =
 
   return { rules, productGroups, productGroupTypes, tenantId };
 };
+
+/**
+ * Carga diferida: el loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getRoyaltiesPageData = () => ({
+  data: fetchRoyaltiesPageData(),
+});

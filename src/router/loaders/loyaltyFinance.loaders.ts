@@ -33,7 +33,7 @@ export const emptyOverview: LoyaltyOverview = {
   top_customers: [],
 };
 
-export const getLoyaltyFinancePageData =
+const fetchLoyaltyFinancePageData =
   async (): Promise<LoyaltyFinancePageLoaderData> =>
     withAuthCheck(async () => {
       const currentUser = await authApi.getCurrentUser();
@@ -58,3 +58,12 @@ export const getLoyaltyFinancePageData =
         currentTenantName,
       };
     });
+
+/**
+ * Carga diferida: el loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getLoyaltyFinancePageData = () => ({
+  data: fetchLoyaltyFinancePageData(),
+});

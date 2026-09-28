@@ -8,7 +8,7 @@ export interface ReportsPageLoaderData {
   tenantId: string | null;
 }
 
-export const getReportsPageData = async (): Promise<ReportsPageLoaderData> => {
+const fetchReportsPageData = async (): Promise<ReportsPageLoaderData> => {
   const currentUser = await authApi.getCurrentUser();
   const tenantId = currentUser?.tenant?.tenant_id ?? null;
 
@@ -18,3 +18,12 @@ export const getReportsPageData = async (): Promise<ReportsPageLoaderData> => {
 
   return { warehouses, tenantId };
 };
+
+/**
+ * Carga diferida: el loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getReportsPageData = () => ({
+  data: fetchReportsPageData(),
+});

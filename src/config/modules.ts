@@ -35,7 +35,7 @@ export interface Module {
   id: ModuleId;
   label: string;
   description: string;
-  color: "blue" | "purple" | "amber" | "green" | "red";
+  color: "blue" | "purple" | "amber" | "green" | "red" | "gray";
   code: string;
   path: string;
   icon:
@@ -55,7 +55,7 @@ export const MODULES: Record<ModuleId, Module> = {
     id: "general",
     label: "General",
     description: "Gestion general del sistema",
-    color: "blue",
+    color: "gray",
     code: "GEN",
     path: "/app",
     icon: "briefcase",
@@ -305,15 +305,8 @@ export const MODULES: Record<ModuleId, Module> = {
         rolesAllowed: [1, 2, 3],
       },
       {
-        id: "compensation",
-        label: "Novedades de nomina",
-        path: "/app/hr/compensation",
-        icon: "calendar",
-        rolesAllowed: [1, 2, 3],
-      },
-      {
         id: "benefits",
-        label: "Beneficios y prestaciones",
+        label: "Beneficios y deducciones",
         path: "/app/hr/benefits",
         icon: "credit-card",
         rolesAllowed: [1, 2, 3],
@@ -391,7 +384,7 @@ export const MODULES: Record<ModuleId, Module> = {
       },
       {
         id: "promotions",
-        label: "Promociones y regalias",
+        label: "Promociones",
         path: "/app/fnz/promotions",
         icon: "trending-up",
         rolesAllowed: [1, 2, 3],
@@ -425,6 +418,7 @@ export function getModuleColor(moduleId: ModuleId): string {
     amber: "#f59e0b",
     green: "#22c55e",
     red: "#ef4444",
+    gray: "#111827",
   };
   return colorMap[MODULES[moduleId].color];
 }
@@ -465,6 +459,13 @@ export function getModuleColorClasses(moduleId: ModuleId) {
       text: "text-red-700",
       accent: "text-red-600",
       button: "bg-red-600 hover:bg-red-700 text-white",
+    },
+    gray: {
+      bg: "bg-gray-50",
+      border: "border-gray-200",
+      text: "text-gray-700",
+      accent: "text-gray-900",
+      button: "bg-gray-900 hover:bg-gray-800 text-white",
     },
   };
   return classMap[MODULES[moduleId].color];

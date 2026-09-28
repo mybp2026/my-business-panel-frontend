@@ -17,7 +17,7 @@ export interface FnzExpensePageLoaderData {
   exchangeRates: ExchangeRate[];
 }
 
-export async function getFnzExpensePageData(): Promise<FnzExpensePageLoaderData> {
+async function fetchFnzExpensePageData(): Promise<FnzExpensePageLoaderData> {
   const user = await authApi.getCurrentUser();
   const tenantId = user?.tenant?.tenant_id ?? "";
 
@@ -36,3 +36,12 @@ export async function getFnzExpensePageData(): Promise<FnzExpensePageLoaderData>
     exchangeRates,
   };
 }
+
+/**
+ * Carga diferida: el loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getFnzExpensePageData = () => ({
+  data: fetchFnzExpensePageData(),
+});

@@ -15,7 +15,7 @@ export interface PromotionsPageLoaderData {
   tenantId: string;
 }
 
-export const getPromotionsPageData =
+const fetchPromotionsPageData =
   async (): Promise<PromotionsPageLoaderData> => {
     const currentUser = await authApi.getCurrentUser();
     const tenantId = currentUser?.tenant?.tenant_id ?? "";
@@ -30,6 +30,15 @@ export const getPromotionsPageData =
 
     return { promotions, promotionTypes, segments, tenantId };
   };
+
+/**
+ * Carga diferida: el loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getPromotionsPageData = () => ({
+  data: fetchPromotionsPageData(),
+});
 
 export const getPromotionsByTenant = (tenantId: string): Promise<Promotion[]> =>
   promotionApi.getByTenant(tenantId);

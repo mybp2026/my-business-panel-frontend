@@ -9,9 +9,14 @@ import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
 import { Table } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
 import { useHrEmployee } from "@/context/HrEmployeeContext";
 
 import { IconTrendingUp } from "@/assets/icons";
+
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
+import { useDisplayCurrency } from "@/context/CurrencyContext";
+import { bsToUsd, formatBs, formatUsd } from "@/utils/dualCurrency";
 
 import type { Column } from "@/interfaces/components/ui/TableProps.interface";
 import type { ToastMode } from "@/interfaces/components/ui/ToastProps.interface";
@@ -23,13 +28,6 @@ import type {
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const currentYear = new Date().getFullYear();
 
-const formatAmount = (value: number | string | null | undefined) =>
-  value === null || value === undefined
-    ? "—"
-    : Number(value).toLocaleString("es-VE", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
 
 const STATUS_VARIANT: Record<
   HrProfitSharingPeriod["status"],
@@ -48,6 +46,18 @@ const STATUS_LABEL: Record<HrProfitSharingPeriod["status"], string> = {
 
 export function ProfitSharingSection() {
   const { employeeId, employees, employeeOptions } = useHrEmployee();
+  const usdRate = useCurrentExchangeRate();
+  const { displayCurrency } = useDisplayCurrency();
+
+  const formatDisplayAmount = (value: number | string | null | undefined) => {
+    if (value === null || value === undefined) return "—";
+    const bs = Number(value);
+    return displayCurrency === "VES"
+      ? formatBs(bs)
+      : bsToUsd(bs, usdRate) !== null
+        ? formatUsd(bsToUsd(bs, usdRate)!)
+        : "—";
+  };
 
   const [periods, setPeriods] = useState<HrProfitSharingPeriod[]>([]);
   const [period, setPeriod] = useState<HrProfitSharingPeriod | null>(null);
@@ -277,7 +287,7 @@ export function ProfitSharingSection() {
       label: "Salario devengado",
       width: "22%",
       render: (value: number | string) => (
-        <span className="font-mono">{formatAmount(value)}</span>
+        <DualCurrencyAmount amountBs={Number(value)} rate={usdRate} hideSecondary />
       ),
     },
     { key: "complete_months", label: "Meses completos", width: "22%" },
@@ -285,9 +295,12 @@ export function ProfitSharingSection() {
       key: "final_amount",
       label: "Monto final",
       width: "22%",
-      render: (value: number | string | null) => (
-        <span className="font-mono">{formatAmount(value)}</span>
-      ),
+      render: (value: number | string | null) =>
+        value === null ? (
+          "—"
+        ) : (
+          <DualCurrencyAmount amountBs={Number(value)} rate={usdRate} hideSecondary />
+        ),
     },
   ];
 
@@ -418,12 +431,12 @@ export function ProfitSharingSection() {
           <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-3">
             <StatCard
               label="Beneficios líquidos"
-              value={formatAmount(period.liquid_benefits)}
+              value={formatDisplayAmount(period.liquid_benefits)}
               icon={<IconTrendingUp />}
             />
             <StatCard
               label="Monto repartible"
-              value={formatAmount(period.distributable_amount)}
+              value={formatDisplayAmount(period.distributable_amount)}
               icon={<IconTrendingUp />}
               accent
             />
@@ -523,7 +536,7 @@ export function ProfitSharingSection() {
             </Button>
             {bonusPreview?.amount && (
               <Button onClick={handlePayBonus} loading={isSubmitting}>
-                Pagar {formatAmount(bonusPreview.amount)}
+                Pagar {formatDisplayAmount(bonusPreview.amount)}
               </Button>
             )}
           </div>
@@ -531,7 +544,7 @@ export function ProfitSharingSection() {
         {bonusPreview?.days && (
           <p className="mt-3 text-sm text-gray-600">
             {bonusPreview.days} días de salario ={" "}
-            {formatAmount(bonusPreview.amount)}
+            {formatDisplayAmount(bonusPreview.amount)}
           </p>
         )}
       </section>
