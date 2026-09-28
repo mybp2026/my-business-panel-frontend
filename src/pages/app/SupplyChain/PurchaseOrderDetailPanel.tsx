@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 
+import type { ReactNode } from "react";
+
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
+
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
+import { formatBs, usdToBs } from "@/utils/dualCurrency";
 
 import type {
   PaymentMethodCatalog,
@@ -71,6 +77,10 @@ export function PurchaseOrderDetailPanel({
   onRegisterPayment,
   onUpdatePayment,
 }: PurchaseOrderDetailPanelProps) {
+  // Tasa para mostrar USD -> Bs. en paralelo (igual que POS/Ventas). Distinta
+  // del `exchangeRate` local de mas abajo, que es para el conversor en vivo
+  // del formulario de abono rapido -- no mezclar los dos.
+  const displayRate = useCurrentExchangeRate();
   const [productsOnly, setProductsOnly] = useState(false);
   const [showQuickPayment, setShowQuickPayment] = useState(false);
   const [quickPaymentSubmitting, setQuickPaymentSubmitting] = useState(false);
@@ -547,24 +557,56 @@ export function PurchaseOrderDetailPanel({
             <div className="mt-4 space-y-3">
               <AmountRow
                 label="Subtotal"
-                value={formatCurrency(order.subtotal)}
+                value={
+                  <DualCurrencyAmount
+                    amountUsd={Number(order.subtotal ?? 0)}
+                    rate={displayRate}
+                    align="right"
+                  />
+                }
               />
               <AmountRow
                 label="Impuesto"
-                value={formatCurrency(order.tax_amount)}
+                value={
+                  <DualCurrencyAmount
+                    amountUsd={Number(order.tax_amount ?? 0)}
+                    rate={displayRate}
+                    align="right"
+                  />
+                }
               />
               <AmountRow
                 label="Total"
-                value={formatCurrency(order.total_amount)}
+                value={
+                  <DualCurrencyAmount
+                    amountUsd={Number(order.total_amount ?? 0)}
+                    rate={displayRate}
+                    align="right"
+                    bold
+                  />
+                }
                 emphasized
               />
               <AmountRow
                 label="Abonado"
-                value={formatCurrency(order.amount_paid)}
+                value={
+                  <DualCurrencyAmount
+                    amountUsd={Number(order.amount_paid ?? 0)}
+                    rate={displayRate}
+                    align="right"
+                  />
+                }
               />
               <AmountRow
                 label="Pendiente"
-                value={formatCurrency(order.balance_due)}
+                value={
+                  <DualCurrencyAmount
+                    amountUsd={Number(order.balance_due ?? 0)}
+                    rate={displayRate}
+                    align="right"
+                    bold
+                  />
+                }
                 emphasized
               />
             </div>
@@ -618,8 +660,18 @@ export function PurchaseOrderDetailPanel({
                       {item.variant_name ?? item.product_variant_id}
                     </td>
                     <td className={cell}>{ordered}</td>
-                    <td className={cell}>{formatCurrency(item.unit_price)}</td>
-                    <td className={cell}>{formatCurrency(item.line_total)}</td>
+                    <td className={cell}>
+                      <DualCurrencyAmount
+                        amountUsd={Number(item.unit_price)}
+                        rate={displayRate}
+                      />
+                    </td>
+                    <td className={cell}>
+                      <DualCurrencyAmount
+                        amountUsd={Number(item.line_total)}
+                        rate={displayRate}
+                      />
+                    </td>
                     <td className={cell}>
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-900">
@@ -703,9 +755,10 @@ export function PurchaseOrderDetailPanel({
                           </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-sm text-gray-700">
-                            {formatCurrency(invoice.total_amount)}
-                          </span>
+                          <DualCurrencyAmount
+                            amountUsd={Number(invoice.total_amount)}
+                            rate={displayRate}
+                          />
                           <Badge variant={invoice.paid ? "green" : "yellow"}>
                             {invoice.paid ? "Pagada" : "Pendiente"}
                           </Badge>
@@ -829,7 +882,12 @@ export function PurchaseOrderDetailPanel({
                         Saldo pendiente:{" "}
                         <span className="font-mono">
                           {formatCurrency(balanceDue)}
-                        </span>
+                        </span>{" "}
+                        {displayRate && (
+                          <span className="font-mono text-amber-600">
+                            (≈ {formatBs(usdToBs(balanceDue, displayRate) ?? 0)})
+                          </span>
+                        )}
                       </p>
                     </div>
                     <Button
@@ -1128,7 +1186,13 @@ export function PurchaseOrderDetailPanel({
                   id: receipt.goods_receipt_id,
                   title: formatDateTime(receipt.received_date),
                   meta: `${receipt.items_received} item(s) recibidos`,
-                  amount: formatCurrency(receipt.total_amount),
+                  amount: (
+                    <DualCurrencyAmount
+                      amountUsd={Number(receipt.total_amount)}
+                      rate={displayRate}
+                      align="right"
+                    />
+                  ),
                 }))}
                 emptyMessage="La orden todavía no ha generado recepción de mercadería."
               />
@@ -1186,9 +1250,11 @@ export function PurchaseOrderDetailPanel({
                     className="flex flex-wrap items-center justify-between gap-3 border-t border-emerald-100 px-4 py-3 first:border-t-0"
                   >
                     <div>
-                      <p className="text-sm font-semibold text-emerald-900">
-                        {formatCurrency(credit.remaining_amount)} disponibles
-                      </p>
+                      <DualCurrencyAmount
+                        amountUsd={Number(credit.remaining_amount)}
+                        rate={displayRate}
+                        amountClassName="text-sm font-semibold text-emerald-900"
+                      />
                       <p className="text-xs text-emerald-700">
                         Origen: nota de crédito por mercancía dañada
                       </p>
@@ -1420,7 +1486,7 @@ function AmountRow({
   emphasized = false,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   emphasized?: boolean;
 }) {
   return (
@@ -1430,11 +1496,11 @@ function AmountRow({
       >
         {label}
       </span>
-      <span
+      <div
         className={`font-mono text-sm ${emphasized ? "font-semibold text-gray-900" : "text-gray-700"}`}
       >
         {value}
-      </span>
+      </div>
     </div>
   );
 }
@@ -1446,10 +1512,10 @@ function StackList({
 }: {
   items: Array<{
     id: string;
-    title: string;
+    title: ReactNode;
     meta?: string;
     description?: string;
-    amount?: string;
+    amount?: ReactNode;
     badge?: string;
     badgeVariant?: "green" | "yellow" | "red" | "blue" | "secondary";
     originalData?: any;
@@ -1481,9 +1547,9 @@ function StackList({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {item.amount && (
-              <span className="font-mono text-sm text-gray-700">
+              <div className="font-mono text-sm text-gray-700">
                 {item.amount}
-              </span>
+              </div>
             )}
             {item.badge && (
               <Badge variant={item.badgeVariant ?? "secondary"}>
