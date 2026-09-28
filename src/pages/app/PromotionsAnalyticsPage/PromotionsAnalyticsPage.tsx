@@ -16,6 +16,8 @@ import {
   PROMO_INTERVAL_OPTIONS,
 } from "@/constants/promotion";
 import { RoyaltyAnalyticsTab } from "./RoyaltyAnalyticsTab";
+import { LoyaltyAnalyticsTab } from "./LoyaltyAnalyticsTab";
+import { FinanceRateBadge } from "@/components/finances/FinanceRateBadge";
 
 import type { PromotionsAnalyticsLoaderData } from "@/router/loaders/promotionsAnalytics.loaders";
 import type {
@@ -110,13 +112,16 @@ export function PromotionsAnalyticsPage() {
   const {
     rows: initialRows,
     royalty,
+    loyalty,
     currencies,
     exchangeRates,
     branches,
     tenantId,
   } = useLoaderData() as PromotionsAnalyticsLoaderData;
 
-  const [tab, setTab] = useState<"promociones" | "regalias">("promociones");
+  const [tab, setTab] = useState<"promociones" | "regalias" | "fidelidad">(
+    "promociones",
+  );
   const [rows, setRows] = useState<PromoAnalyticsRow[]>(initialRows);
   const [currentInterval, setCurrentInterval] = useState<PromoInterval>(
     DEFAULT_PROMO_INTERVAL,
@@ -237,6 +242,7 @@ export function PromotionsAnalyticsPage() {
               entregada como regalia en el periodo seleccionado.
             </p>
           </div>
+          <FinanceRateBadge />
         </div>
       </section>
 
@@ -245,6 +251,7 @@ export function PromotionsAnalyticsPage() {
         {[
           { id: "promociones" as const, label: "Promociones" },
           { id: "regalias" as const, label: "Regalias" },
+          { id: "fidelidad" as const, label: "Punto de fidelidad" },
         ].map((t) => (
           <button
             key={t.id}
@@ -267,6 +274,10 @@ export function PromotionsAnalyticsPage() {
           branches={branches}
           tenantId={tenantId}
         />
+      )}
+
+      {tab === "fidelidad" && (
+        <LoyaltyAnalyticsTab initial={loyalty} branches={branches} />
       )}
 
       {tab === "promociones" && (

@@ -27,6 +27,7 @@ const emptyRaw: ProfitabilityRawData = {
   sales: [],
   returns: [],
   expenses: [],
+  expense_categories: [],
 };
 
 export const getProfitabilityPageData =

@@ -14,6 +14,7 @@ import {
 
 import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
+import { FinanceRateBadge } from "@/components/finances/FinanceRateBadge";
 import { IconTrendingUp, IconCreditCard, IconCheckCircle } from "@/assets/icons";
 
 import { financesApi } from "@/api/finances.api";
@@ -287,13 +288,19 @@ function ProjectionsTable({
 // ─── page ────────────────────────────────────────────────────────────────────
 
 export function CashFlowPage() {
-  const { cashFlow: initialCashFlow, projections, currencies, exchangeRates } =
-    useLoaderData() as CashFlowPageLoaderData;
+  const {
+    cashFlow: initialCashFlow,
+    projections,
+    currencies,
+    exchangeRates,
+    branches,
+  } = useLoaderData() as CashFlowPageLoaderData;
 
   const [cashFlow, setCashFlow] = useState<CashFlowData>(initialCashFlow);
   const [groupBy, setGroupBy] = useState<CashFlowGroupBy>(
     initialCashFlow.group_by ?? "daily",
   );
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("");
   const [startDate, setStartDate] = useState<string>(
     initialCashFlow.start_date ||
       new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
@@ -314,10 +321,14 @@ export function CashFlowPage() {
     startDate: string;
     endDate: string;
     groupBy: CashFlowGroupBy;
+    branchId?: string;
   }) {
     setLoading(true);
     try {
-      const data = await financesApi.getCashFlow(params);
+      const data = await financesApi.getCashFlow({
+        ...params,
+        branchId: params.branchId || undefined,
+      });
       setCashFlow(data);
     } finally {
       setLoading(false);
@@ -327,7 +338,12 @@ export function CashFlowPage() {
   async function handleGroupByChange(value: string) {
     const next = value as CashFlowGroupBy;
     setGroupBy(next);
-    await fetchData({ startDate, endDate, groupBy: next });
+    await fetchData({
+      startDate,
+      endDate,
+      groupBy: next,
+      branchId: selectedBranchId,
+    });
   }
 
   async function handleDateChange(
@@ -338,7 +354,17 @@ export function CashFlowPage() {
     const nextEnd = field === "endDate" ? value : endDate;
     if (field === "startDate") setStartDate(value);
     else setEndDate(value);
-    await fetchData({ startDate: nextStart, endDate: nextEnd, groupBy });
+    await fetchData({
+      startDate: nextStart,
+      endDate: nextEnd,
+      groupBy,
+      branchId: selectedBranchId,
+    });
+  }
+
+  async function handleBranchChange(value: string) {
+    setSelectedBranchId(value);
+    await fetchData({ startDate, endDate, groupBy, branchId: value });
   }
 
   // KPI cards
@@ -405,17 +431,20 @@ export function CashFlowPage() {
     <div className="p-6 lg:p-8">
       {/* Hero */}
       <section className="mb-6 rounded-4xl p-6">
-        <div className="max-w-3xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent-700">
-            Finanzas
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
-            Flujo de Caja
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-gray-600">
-            Movimiento real de efectivo: entradas, salidas, flujo neto y
-            proyecciones futuras del negocio.
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="max-w-3xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent-700">
+              Finanzas
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
+              Flujo de Caja
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+              Movimiento real de efectivo: entradas, salidas, flujo neto y
+              proyecciones futuras del negocio.
+            </p>
+          </div>
+          <FinanceRateBadge />
         </div>
       </section>
 
@@ -449,6 +478,22 @@ export function CashFlowPage() {
             options={GROUP_BY_OPTIONS}
           />
         </div>
+        {branches.length > 1 && (
+          <div className="w-56">
+            <p className="mb-1.5 text-sm font-medium text-gray-700">Sucursal</p>
+            <Select
+              value={selectedBranchId}
+              onChange={(e) => void handleBranchChange(e.target.value)}
+              options={[
+                { value: "", label: "Todas las sucursales" },
+                ...branches.map((b) => ({
+                  value: b.branch_id,
+                  label: b.branch_name,
+                })),
+              ]}
+            />
+          </div>
+        )}
         {currencies.length > 1 && (
           <div className="w-56">
             <p className="mb-1.5 text-sm font-medium text-gray-700">
