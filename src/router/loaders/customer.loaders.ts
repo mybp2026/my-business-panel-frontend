@@ -17,35 +17,43 @@ export type CustomersPageLoaderData = {
   tenants: Tenant[];
 };
 
-export const getCustomersPageData =
-  async (): Promise<CustomersPageLoaderData> =>
-    withAuthCheck(async () => {
-      const currentUser = await authApi.getCurrentUser();
-      const isSuperAdmin = currentUser?.role.role_id === 1;
-      const tenantId = currentUser?.tenant.tenant_id;
+const fetchCustomersPageData = async (): Promise<CustomersPageLoaderData> =>
+  withAuthCheck(async () => {
+    const currentUser = await authApi.getCurrentUser();
+    const isSuperAdmin = currentUser?.role.role_id === 1;
+    const tenantId = currentUser?.tenant.tenant_id;
 
-      const [initialCustomers, segments] = await Promise.all([
-        isSuperAdmin
-          ? customerApi.listAll(1, CUSTOMERS_PAGE_LIMIT)
-          : tenantId
-            ? customerApi.listByTenant(tenantId, 1, CUSTOMERS_PAGE_LIMIT)
-            : {
-                customers: [],
-                total: 0,
-                page: 1,
-                limit: CUSTOMERS_PAGE_LIMIT,
-              },
-        segmentApi.getAll(),
-      ]);
+    const [initialCustomers, segments] = await Promise.all([
+      isSuperAdmin
+        ? customerApi.listAll(1, CUSTOMERS_PAGE_LIMIT)
+        : tenantId
+          ? customerApi.listByTenant(tenantId, 1, CUSTOMERS_PAGE_LIMIT)
+          : {
+              customers: [],
+              total: 0,
+              page: 1,
+              limit: CUSTOMERS_PAGE_LIMIT,
+            },
+      segmentApi.getAll(),
+    ]);
 
-      let tenants: Tenant[] = [];
-      if (isSuperAdmin) {
-        const tenantsResult = await tenantApi.getAll(1, 200);
-        tenants = tenantsResult.tenants;
-      }
+    let tenants: Tenant[] = [];
+    if (isSuperAdmin) {
+      const tenantsResult = await tenantApi.getAll(1, 200);
+      tenants = tenantsResult.tenants;
+    }
 
-      return { initialCustomers, segments, tenants };
-    });
+    return { initialCustomers, segments, tenants };
+  });
+
+/**
+ * Carga diferida: el loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getCustomersPageData = () => ({
+  data: fetchCustomersPageData(),
+});
 
 export const getAllCustomers = async (
   page = 1,

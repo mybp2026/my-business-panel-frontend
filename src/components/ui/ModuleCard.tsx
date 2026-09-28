@@ -17,6 +17,7 @@ export function ModuleCard({
     amber: "hover:bg-amber-50 hover:border-amber-200",
     green: "hover:bg-green-50 hover:border-green-200",
     red: "hover:bg-red-50 hover:border-red-200",
+    gray: "hover:bg-gray-100 hover:border-gray-300",
   };
 
   const colorIconMap = {
@@ -25,6 +26,7 @@ export function ModuleCard({
     amber: "group-hover:bg-amber-100 group-hover:text-amber-700",
     green: "group-hover:bg-green-100 group-hover:text-green-700",
     red: "group-hover:bg-red-100 group-hover:text-red-700",
+    gray: "group-hover:bg-gray-200 group-hover:text-gray-900",
   };
 
   const hoverClass = accentColor
@@ -37,7 +39,7 @@ export function ModuleCard({
   return (
     <Link
       to={to}
-      className={`group bg-white rounded-2xl border border-gray-200 p-5 flex flex-col items-start gap-3 shadow-sm hover:shadow-lg transition-all duration-200 relative overflow-hidden ${hoverClass} ${colorClass}`}
+      className={`group bg-white rounded-2xl border border-gray-300 p-5 flex flex-col items-start gap-3 hover:shadow-md transition-all duration-200 relative overflow-hidden ${hoverClass} ${colorClass}`}
     >
       <div className="absolute top-3 right-3 text-xs font-bold opacity-10 text-gray-700 text-right">
         {code}

@@ -12,7 +12,7 @@ export interface BranchesPageLoaderData {
   tenants: Tenant[];
 }
 
-export const getBranchesPageData = async (): Promise<BranchesPageLoaderData> =>
+const fetchBranchesPageData = async (): Promise<BranchesPageLoaderData> =>
   withAuthCheck(async () => {
     const currentUser = await authApi.getCurrentUser();
     const isSuperAdmin = currentUser?.role?.role_hierarchy === 1;
@@ -27,6 +27,15 @@ export const getBranchesPageData = async (): Promise<BranchesPageLoaderData> =>
 
     return { initialBranches, tenants };
   });
+
+/**
+ * Carga diferida: el loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getBranchesPageData = () => ({
+  data: fetchBranchesPageData(),
+});
 
 export const getBranches = async (
   page = 1,

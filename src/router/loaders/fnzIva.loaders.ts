@@ -11,7 +11,7 @@ export interface FnzIvaPageLoaderData {
   exchangeRates: ExchangeRate[];
 }
 
-export async function getFnzIvaPageData(): Promise<FnzIvaPageLoaderData> {
+async function fetchFnzIvaPageData(): Promise<FnzIvaPageLoaderData> {
   const user = await authApi.getCurrentUser();
   const tenantId = user?.tenant?.tenant_id ?? "";
 
@@ -22,3 +22,12 @@ export async function getFnzIvaPageData(): Promise<FnzIvaPageLoaderData> {
 
   return { tenantId, currencies, exchangeRates };
 }
+
+/**
+ * Carga diferida: el loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getFnzIvaPageData = () => ({
+  data: fetchFnzIvaPageData(),
+});

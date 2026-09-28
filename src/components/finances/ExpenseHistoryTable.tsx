@@ -2,15 +2,13 @@ import { useEffect, useState } from "react";
 
 import { financesApi } from "@/api/finances.api";
 import { Badge } from "@/components/ui/Badge";
-import { Select } from "@/components/ui/Select";
 import { Table, Pagination } from "@/components/ui/Table";
+import { useTableQuery } from "@/hooks/useTableQuery";
 
 import type { Branch } from "@/interfaces/entities/Branch.interface";
 import type { Currency } from "@/interfaces/entities/Currency.interface";
 import type { ExpenseHistoryRow } from "@/interfaces/entities/FnzExpense.interface";
 import type { Column } from "@/interfaces/components/ui/TableProps.interface";
-
-const PAGE_LIMIT = 20;
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CASH: "Efectivo",
@@ -33,7 +31,10 @@ export function ExpenseHistoryTable({
   refreshSignal = 0,
 }: ExpenseHistoryTableProps) {
   const [branchId, setBranchId] = useState("");
-  const [page, setPage] = useState(1);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const { page, limit, sortDir, setPage, handleLimitChange, handleSortChange } =
+    useTableQuery({ initialSortBy: "expense_date", initialSortDir: "desc" });
   const [rows, setRows] = useState<ExpenseHistoryRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -54,15 +55,26 @@ export function ExpenseHistoryTable({
     let cancelled = false;
     setLoading(true);
     setError(null);
+    // dateTo es un input tipo date (sin hora): agregamos el limite del dia
+    // para incluir los gastos de esa fecha completa.
+    const dateToBoundary = dateTo ? `${dateTo}T23:59:59.999` : null;
     financesApi
       .getExpenseHistory({
         branchId: branchId || null,
+        start: dateFrom || null,
+        end: dateToBoundary,
         page,
-        limit: PAGE_LIMIT,
+        limit,
       })
       .then((data) => {
         if (cancelled) return;
-        setRows(data.results);
+        const sorted = [...data.results].sort((a, b) => {
+          const diff =
+            new Date(b.expense_date).getTime() -
+            new Date(a.expense_date).getTime();
+          return sortDir === "asc" ? -diff : diff;
+        });
+        setRows(sorted);
         setTotal(data.total);
       })
       .catch((err) => {
@@ -77,9 +89,9 @@ export function ExpenseHistoryTable({
     return () => {
       cancelled = true;
     };
-  }, [branchId, page, refreshSignal]);
+  }, [branchId, dateFrom, dateTo, page, limit, sortDir, refreshSignal]);
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
+  const totalPages = Math.max(1, Math.ceil(total / limit));
 
   const branchOptions = [
     { value: "", label: "Todas las sucursales" },
@@ -91,6 +103,7 @@ export function ExpenseHistoryTable({
       key: "expense_date",
       label: "Fecha",
       width: "12%",
+      sortable: true,
       render: (value: unknown) =>
         new Date(value as string).toLocaleDateString("es-CR"),
     },
@@ -150,18 +163,7 @@ export function ExpenseHistoryTable({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="w-60">
-          <Select
-            label="Sucursal"
-            value={branchId}
-            onChange={(e) => {
-              setBranchId(e.target.value);
-              setPage(1);
-            }}
-            options={branchOptions}
-          />
-        </div>
+      <div className="flex justify-end">
         <div className="text-sm text-gray-500">
           {total} gasto{total !== 1 ? "s" : ""}
         </div>
@@ -178,6 +180,38 @@ export function ExpenseHistoryTable({
         data={rows}
         isLoading={loading}
         emptyMessage="No hay gastos registrados para el filtro seleccionado"
+        sortBy="expense_date"
+        sortDir={sortDir}
+        onSortChange={handleSortChange}
+        filters={{
+          branch: {
+            value: branchId,
+            onChange: (value) => {
+              setBranchId(value);
+              setPage(1);
+            },
+            options: branchOptions,
+          },
+          dateFrom: {
+            value: dateFrom,
+            onChange: (value) => {
+              setDateFrom(value);
+              setPage(1);
+            },
+          },
+          dateTo: {
+            value: dateTo,
+            onChange: (value) => {
+              setDateTo(value);
+              setPage(1);
+            },
+          },
+          onClear: () => {
+            setDateFrom("");
+            setDateTo("");
+            setPage(1);
+          },
+        }}
       />
 
       {totalPages > 1 && (
@@ -186,6 +220,9 @@ export function ExpenseHistoryTable({
           totalPages={totalPages}
           onPageChange={setPage}
           loading={loading}
+          limit={limit}
+          onLimitChange={handleLimitChange}
+          total={total}
         />
       )}
     </div>

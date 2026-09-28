@@ -64,7 +64,7 @@ export type HrEmployeesPageLoaderData = {
   dutiesTypes: HrDutiesType[];
 };
 
-export const getHrEmployeesPageData =
+const fetchHrEmployeesPageData =
   async (): Promise<HrEmployeesPageLoaderData> => {
     const { currentUser, tenantId, branches } = await getCurrentTenantContext();
 
@@ -92,7 +92,7 @@ export const getHrEmployeesPageData =
 
 export type HrContractsPageLoaderData = HrEmployeesPageLoaderData;
 
-export const getHrContractsPageData =
+const fetchHrContractsPageData =
   async (): Promise<HrContractsPageLoaderData> => {
     const { currentUser, tenantId, branches } = await getCurrentTenantContext();
 
@@ -125,7 +125,7 @@ export type HrPayrollPageLoaderData = {
   paysheets: HrPaysheet[];
 };
 
-export const getHrPayrollPageData =
+const fetchHrPayrollPageData =
   async (): Promise<HrPayrollPageLoaderData> => {
     const { currentUser, tenantId, branches } = await getCurrentTenantContext();
 
@@ -150,7 +150,7 @@ export type HrAttendancePageLoaderData = {
   turns: HrTurn[];
 };
 
-export const getHrAttendancePageData =
+const fetchHrAttendancePageData =
   async (): Promise<HrAttendancePageLoaderData> => {
     const { currentUser, tenantId, branches } = await getCurrentTenantContext();
 
@@ -178,7 +178,7 @@ export type HrAmonestacionesPageLoaderData = {
   employees: HrEmployeeRecord[];
 };
 
-export const getHrAmonestacionesPageData =
+const fetchHrAmonestacionesPageData =
   async (): Promise<HrAmonestacionesPageLoaderData> => {
     const { currentUser, tenantId, branches } = await getCurrentTenantContext();
 
@@ -196,3 +196,28 @@ export const getHrAmonestacionesPageData =
       employees,
     };
   };
+
+/**
+ * Carga diferida: cada loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getHrEmployeesPageData = () => ({
+  data: fetchHrEmployeesPageData(),
+});
+
+export const getHrContractsPageData = () => ({
+  data: fetchHrContractsPageData(),
+});
+
+export const getHrPayrollPageData = () => ({
+  data: fetchHrPayrollPageData(),
+});
+
+export const getHrAttendancePageData = () => ({
+  data: fetchHrAttendancePageData(),
+});
+
+export const getHrAmonestacionesPageData = () => ({
+  data: fetchHrAmonestacionesPageData(),
+});

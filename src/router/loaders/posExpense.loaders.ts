@@ -13,7 +13,7 @@ export interface PosExpensePageLoaderData {
   tenantId: string;
 }
 
-export const getPosExpensePageData =
+const fetchPosExpensePageData =
   async (): Promise<PosExpensePageLoaderData> => {
     const user = await authApi.getCurrentUser();
     const tenantId = user?.tenant?.tenant_id ?? "";
@@ -31,3 +31,12 @@ export const getPosExpensePageData =
       tenantId,
     };
   };
+
+/**
+ * Carga diferida: el loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getPosExpensePageData = () => ({
+  data: fetchPosExpensePageData(),
+});

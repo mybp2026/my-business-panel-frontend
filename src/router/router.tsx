@@ -7,6 +7,7 @@ import {
 import { AuthProvider } from "@/context/AuthContext";
 import { OnboardingProvider } from "@/context/OnboardingContext";
 import { ModuleProvider } from "@/context/ModuleContext";
+import { CurrencyProvider } from "@/context/CurrencyContext";
 import { publicRoutes } from "./public/routes";
 import { privateRoutes } from "./private/routes";
 
@@ -22,11 +23,13 @@ function RootLayout() {
     <AuthProvider>
       <OnboardingProvider>
         <ModuleProvider>
-          {/* Barra de carga global: visible en cualquier ruta con loader activo */}
-          {navigation.state === "loading" && (
-            <div className="fixed top-0 inset-x-0 h-0.5 bg-accent-600 z-100 animate-pulse" />
-          )}
-          <Outlet />
+          <CurrencyProvider>
+            {/* Barra de carga global: visible en cualquier ruta con loader activo */}
+            {navigation.state === "loading" && (
+              <div className="fixed top-0 inset-x-0 h-0.5 bg-accent-600 z-100 animate-pulse" />
+            )}
+            <Outlet />
+          </CurrencyProvider>
         </ModuleProvider>
       </OnboardingProvider>
     </AuthProvider>

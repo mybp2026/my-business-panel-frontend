@@ -5,5 +5,5 @@ export interface ModuleCardProps {
   to: string;
   code: string;
   colorClass?: string;
-  accentColor?: "blue" | "purple" | "amber" | "green" | "red";
+  accentColor?: "blue" | "purple" | "amber" | "green" | "red" | "gray";
 }

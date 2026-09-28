@@ -12,7 +12,7 @@ import type { ReturnTransaction } from "@/interfaces/entities/ReturnTransaction.
 import type { SaleRefundContext } from "@/interfaces/entities/SaleRefundContext.interface";
 import type { ToastMode } from "@/interfaces/components/ui/ToastProps.interface";
 
-import { isUUID } from "@/pages/app/RefundsPage/refunds.utils";
+import { isUUID } from "@/pages/app/pos/RefundsPage/refunds.utils";
 
 export type RefundMode = "partial" | "full";
 

@@ -9,9 +9,14 @@ import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
 import { Table } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
 import { useHrEmployee } from "@/context/HrEmployeeContext";
 
 import { IconCreditCard } from "@/assets/icons";
+
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
+import { useDisplayCurrency } from "@/context/CurrencyContext";
+import { bsToUsd, formatBs, formatUsd } from "@/utils/dualCurrency";
 
 import type { Column } from "@/interfaces/components/ui/TableProps.interface";
 import type { ToastMode } from "@/interfaces/components/ui/ToastProps.interface";
@@ -23,14 +28,6 @@ import type {
 } from "@/interfaces/entities/Hr.interface";
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
-
-const formatAmount = (value: number | string | null) =>
-  value === null
-    ? "—"
-    : Number(value).toLocaleString("es-VE", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
 
 const LOCATION_OPTIONS = [
   { value: "fideicomiso", label: "Fideicomiso individual" },
@@ -56,6 +53,18 @@ const ADVANCE_STATUS_VARIANT: Record<
 
 export function SeveranceSection() {
   const { employeeId } = useHrEmployee();
+  const usdRate = useCurrentExchangeRate();
+  const { displayCurrency } = useDisplayCurrency();
+
+  const formatDisplayAmount = (value: number | string | null | undefined) => {
+    if (value === null || value === undefined) return "—";
+    const bs = Number(value);
+    return displayCurrency === "VES"
+      ? formatBs(bs)
+      : bsToUsd(bs, usdRate) !== null
+        ? formatUsd(bsToUsd(bs, usdRate)!)
+        : "—";
+  };
 
   const [balance, setBalance] = useState<HrSeveranceBalance | null>(null);
   const [deposits, setDeposits] = useState<HrSeveranceDeposit[]>([]);
@@ -297,7 +306,7 @@ export function SeveranceSection() {
       label: "Monto",
       width: "16%",
       render: (value: number | string) => (
-        <span className="font-mono">{formatAmount(value)}</span>
+        <DualCurrencyAmount amountBs={Number(value)} rate={usdRate} hideSecondary />
       ),
     },
     { key: "location", label: "Ubicación", width: "18%" },
@@ -343,7 +352,7 @@ export function SeveranceSection() {
       label: "Saldo base",
       width: "18%",
       render: (value: number | string) => (
-        <span className="font-mono">{formatAmount(value)}</span>
+        <DualCurrencyAmount amountBs={Number(value)} rate={usdRate} hideSecondary />
       ),
     },
     {
@@ -365,7 +374,7 @@ export function SeveranceSection() {
       label: "Monto",
       width: "18%",
       render: (value: number | string) => (
-        <span className="font-mono">{formatAmount(value)}</span>
+        <DualCurrencyAmount amountBs={Number(value)} rate={usdRate} hideSecondary />
       ),
     },
     {
@@ -390,7 +399,7 @@ export function SeveranceSection() {
       label: "Solicitado",
       width: "18%",
       render: (value: number | string) => (
-        <span className="font-mono">{formatAmount(value)}</span>
+        <DualCurrencyAmount amountBs={Number(value)} rate={usdRate} hideSecondary />
       ),
     },
     { key: "reason", label: "Motivo", width: "18%" },
@@ -452,22 +461,22 @@ export function SeveranceSection() {
         <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-4">
           <StatCard
             label="Depositado"
-            value={formatAmount(balance.depositedAmount)}
+            value={formatDisplayAmount(balance.depositedAmount)}
             icon={<IconCreditCard />}
           />
           <StatCard
             label="Intereses capitalizados"
-            value={formatAmount(balance.capitalizedInterest)}
+            value={formatDisplayAmount(balance.capitalizedInterest)}
             icon={<IconCreditCard />}
           />
           <StatCard
             label="Anticipos aprobados"
-            value={formatAmount(balance.advancesApproved)}
+            value={formatDisplayAmount(balance.advancesApproved)}
             icon={<IconCreditCard />}
           />
           <StatCard
             label="Saldo de garantía"
-            value={formatAmount(balance.balance)}
+            value={formatDisplayAmount(balance.balance)}
             icon={<IconCreditCard />}
             accent
           />
@@ -545,7 +554,7 @@ export function SeveranceSection() {
           Anticipos sobre la garantía (Art. 144)
           {availableAdvance && (
             <span className="ml-2 font-normal text-gray-400">
-              Disponible: {formatAmount(availableAdvance)}
+              Disponible: {formatDisplayAmount(availableAdvance)}
             </span>
           )}
         </h2>

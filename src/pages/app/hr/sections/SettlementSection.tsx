@@ -9,9 +9,14 @@ import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
 import { Table } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
 import { useHrEmployee } from "@/context/HrEmployeeContext";
 
 import { IconCreditCard } from "@/assets/icons";
+
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
+import { useDisplayCurrency } from "@/context/CurrencyContext";
+import { bsToUsd, formatBs, formatUsd } from "@/utils/dualCurrency";
 
 import type { Column } from "@/interfaces/components/ui/TableProps.interface";
 import type { ToastMode } from "@/interfaces/components/ui/ToastProps.interface";
@@ -23,14 +28,6 @@ import type {
 } from "@/interfaces/entities/Hr.interface";
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
-
-const formatAmount = (value: number | string | null | undefined) =>
-  value === null || value === undefined
-    ? "—"
-    : Number(value).toLocaleString("es-VE", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
 
 const STATUS_VARIANT: Record<
   HrSettlement["status"],
@@ -76,6 +73,18 @@ const INDEMNIFIES: HrTerminationType[] = [
 
 export function SettlementSection() {
   const { employeeId, employees } = useHrEmployee();
+  const usdRate = useCurrentExchangeRate();
+  const { displayCurrency } = useDisplayCurrency();
+
+  const formatDisplayAmount = (value: number | string | null | undefined) => {
+    if (value === null || value === undefined) return "—";
+    const bs = Number(value);
+    return displayCurrency === "VES"
+      ? formatBs(bs)
+      : bsToUsd(bs, usdRate) !== null
+        ? formatUsd(bsToUsd(bs, usdRate)!)
+        : "—";
+  };
 
   const [terminationDate, setTerminationDate] = useState(todayIso());
   const [terminationType, setTerminationType] =
@@ -248,7 +257,7 @@ export function SettlementSection() {
       label: "Monto",
       width: "16%",
       render: (value: number | string) => (
-        <span className="font-mono">{formatAmount(value)}</span>
+        <DualCurrencyAmount amountBs={Number(value)} rate={usdRate} hideSecondary />
       ),
     },
   ];
@@ -270,9 +279,12 @@ export function SettlementSection() {
       key: "total",
       label: "Total",
       width: "22%",
-      render: (value: number | string | null) => (
-        <span className="font-mono">{formatAmount(value)}</span>
-      ),
+      render: (value: number | string | null) =>
+        value === null ? (
+          "—"
+        ) : (
+          <DualCurrencyAmount amountBs={Number(value)} rate={usdRate} hideSecondary />
+        ),
     },
     {
       key: "status",
@@ -365,7 +377,7 @@ export function SettlementSection() {
           <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-4">
             <StatCard
               label="Prestaciones (142.d)"
-              value={formatAmount(
+              value={formatDisplayAmount(
                 settlement?.severance_amount ?? preview?.severanceAmount,
               )}
               sublabel={`Vía: ${settlement?.selected_via ?? preview?.selectedVia}`}
@@ -373,12 +385,12 @@ export function SettlementSection() {
             />
             <StatCard
               label="Indemnización (92)"
-              value={formatAmount(preview?.indemnityAmount)}
+              value={formatDisplayAmount(preview?.indemnityAmount)}
               icon={<IconCreditCard />}
             />
             <StatCard
               label="Mora (142.f)"
-              value={formatAmount(
+              value={formatDisplayAmount(
                 settlement?.mora_amount ?? preview?.moraAmount,
               )}
               sublabel={`${settlement?.mora_days ?? preview?.moraDays ?? 0} días`}
@@ -386,7 +398,7 @@ export function SettlementSection() {
             />
             <StatCard
               label="Total"
-              value={formatAmount(settlement?.total ?? preview?.total)}
+              value={formatDisplayAmount(settlement?.total ?? preview?.total)}
               icon={<IconCreditCard />}
               accent
             />

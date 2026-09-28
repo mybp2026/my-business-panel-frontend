@@ -10,7 +10,7 @@ export type UsersPageLoaderData = {
   initialUsers: UsersListResponse;
 };
 
-export const getUsersPageData = async (): Promise<UsersPageLoaderData> =>
+const fetchUsersPageData = async (): Promise<UsersPageLoaderData> =>
   withAuthCheck(async () => {
     const currentUser = await authApi.getCurrentUser();
     const tenantId = currentUser?.tenant?.tenant_id;
@@ -20,6 +20,15 @@ export const getUsersPageData = async (): Promise<UsersPageLoaderData> =>
 
     return { initialUsers };
   });
+
+/**
+ * Carga diferida: el loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getUsersPageData = () => ({
+  data: fetchUsersPageData(),
+});
 
 export const getUsers = async (
   tenantId?: string,

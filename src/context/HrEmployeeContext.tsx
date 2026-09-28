@@ -25,7 +25,7 @@ const HrEmployeeContext = createContext<HrEmployeeContextValue | null>(null);
 
 /**
  * Empleado seleccionado, compartido por todas las pestanas de un
- * modulo de RRHH. Antes cada pagina cargaba la lista y mantenia su
+ * modulo de HR. Antes cada pagina cargaba la lista y mantenia su
  * propio selector, asi que al cambiar de vista habia que volver a
  * elegir a la misma persona.
  */

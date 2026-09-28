@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { StatCard } from "@/components/ui/StatCard";
-import { Table } from "@/components/ui/Table";
+import { Table, Pagination } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
 import { useAuth } from "@/context/AuthContext";
+import { useTableQuery } from "@/hooks/useTableQuery";
 
 import { IconCreditCard, IconPlus, IconSettings } from "@/assets/icons";
 
@@ -68,6 +69,7 @@ export function ExchangeRatePanel({
     mode: ToastMode;
     message: string;
   } | null>(null);
+  const { page, limit, setPage, handleLimitChange } = useTableQuery();
 
   const reload = async () => {
     setIsLoading(true);
@@ -155,12 +157,6 @@ export function ExchangeRatePanel({
 
   const columns: Column[] = [
     {
-      key: "effective_at",
-      label: "Fecha",
-      width: "22%",
-      render: (value: string) => fmtDateTime(value),
-    },
-    {
       key: "change_kind",
       label: "Cambio",
       width: "16%",
@@ -209,7 +205,16 @@ export function ExchangeRatePanel({
       ),
     },
     { key: "source", label: "Origen", width: "8%" },
+    {
+      key: "effective_at",
+      label: "Fecha",
+      width: "22%",
+      render: (value: string) => fmtDateTime(value),
+    },
   ];
+
+  const totalPages = Math.max(1, Math.ceil(ledger.length / limit));
+  const pagedLedger = ledger.slice((page - 1) * limit, page * limit);
 
   return (
     <>
@@ -332,10 +337,14 @@ export function ExchangeRatePanel({
           </p>
           <Table
             columns={columns}
-            data={ledger}
+            data={pagedLedger}
             isLoading={isLoading}
             emptyMessage="Sin movimientos de tasa todavía."
+            pageSize={{ value: limit, onChange: handleLimitChange }}
           />
+          {totalPages > 1 && (
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          )}
         </div>
       )}
     </>

@@ -41,7 +41,7 @@ export const getCashRegistersByBranches = async (
   return dedupeRegisters(groupedRegisters.flat());
 };
 
-export const getCashSessionsPageData =
+const fetchCashSessionsPageData =
   async (): Promise<CashSessionsPageLoaderData> => {
     const currentUser = await authApi.getCurrentUser();
     const tenantId = currentUser?.tenant?.tenant_id;
@@ -66,6 +66,15 @@ export const getCashSessionsPageData =
       initialRegisters,
     };
   };
+
+/**
+ * Carga diferida: el loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getCashSessionsPageData = () => ({
+  data: fetchCashSessionsPageData(),
+});
 
 export const getCashSessions = async (filters?: {
   branchId?: string;

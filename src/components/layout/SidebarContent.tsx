@@ -1,5 +1,4 @@
-import { useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { type ReactNode } from "react";
 import {
   IconBriefcase,
   IconBuilding,
@@ -16,12 +15,11 @@ import {
   IconTrendingUp,
   IconUser,
   IconUsers,
-  LogoMark,
-  IconChevronRight,
 } from "@/assets/icons";
 import { MODULES, isAllowedForRole } from "@/config/modules";
 import { useModule } from "@/context/ModuleContext";
 import { SidebarNavItem } from "@/components/layout/SidebarNavItem";
+import { SidebarCollapsibleGroup } from "@/components/layout/SidebarCollapsibleGroup";
 
 function getIconByName(iconName: string): ReactNode {
   const iconMap: Record<string, ReactNode> = {
@@ -59,23 +57,8 @@ export function SidebarContent({
   onLogout,
   onNavClick,
 }: SidebarContentProps) {
-  const navigate = useNavigate();
   const { currentModule, currentModuleId } = useModule();
-  const [isModulesExpanded, setIsModulesExpanded] = useState(true);
   const initials = userEmail.slice(0, 2).toUpperCase();
-
-  const handleLogoClick = () => {
-    const firstAllowedModule = Object.values(MODULES).find((module) =>
-      isAllowedForRole(module.rolesAllowed, roleId),
-    );
-    if (firstAllowedModule) {
-      const firstSubmodule = firstAllowedModule.submodules.find((s) =>
-        isAllowedForRole(s.rolesAllowed, roleId),
-      );
-      navigate(firstSubmodule?.path ?? firstAllowedModule.path);
-      onNavClick?.();
-    }
-  };
 
   const visibleModules = Object.values(MODULES).filter((module) =>
     isAllowedForRole(module.rolesAllowed, roleId),
@@ -92,43 +75,8 @@ export function SidebarContent({
 
   return (
     <div className="flex h-full flex-col">
-      <div
-        onClick={handleLogoClick}
-        className="mb-2 flex items-center gap-2.5 px-4 py-5 cursor-pointer rounded-lg transition-colors hover:bg-gray-100"
-      >
-        <div className="text-accent-600">
-          <LogoMark size={28} />
-        </div>
-        <span className="font-display text-[15px] font-bold tracking-tight text-gray-900">
-          My Business Panel
-        </span>
-      </div>
-
-      <div className="mx-3 my-4 rounded-2xl border border-gray-200 bg-gray-50/90 p-2">
-        <button
-          onClick={() => setIsModulesExpanded(!isModulesExpanded)}
-          className="flex cursor-pointer w-full items-center justify-between px-2 py-2 text-left"
-        >
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-600">
-            Módulos
-          </p>
-          <span
-            className={[
-              "text-gray-400 transition-transform duration-200",
-              isModulesExpanded ? "rotate-90" : "",
-            ].join(" ")}
-          >
-            <IconChevronRight width={14} />
-          </span>
-        </button>
-        <div
-          className={[
-            "space-y-1 overflow-hidden transition-all duration-200",
-            isModulesExpanded
-              ? "mt-1 max-h-96 opacity-100"
-              : "max-h-0 opacity-0",
-          ].join(" ")}
-        >
+      <div className="my-4">
+        <SidebarCollapsibleGroup title="Módulos">
           {visibleModules.map((module) => {
             const isActive = currentModuleId === module.id;
 
@@ -146,21 +94,15 @@ export function SidebarContent({
               />
             );
           })}
-        </div>
+        </SidebarCollapsibleGroup>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-3 rounded-2xl border border-gray-200 bg-gray-50/90 px-3 py-4">
-          <nav className="flex-1 space-y-0.5 px-3">
-            {mainItems.map((item) => (
-              <SidebarNavItem
-                key={item.path}
-                item={item}
-                onClick={onNavClick}
-              />
-            ))}
-          </nav>
-        </div>
+        <SidebarCollapsibleGroup title={currentModule.label}>
+          {mainItems.map((item) => (
+            <SidebarNavItem key={item.path} item={item} onClick={onNavClick} />
+          ))}
+        </SidebarCollapsibleGroup>
       </div>
 
       <div className="mt-auto p-4 border-t border-gray-100">

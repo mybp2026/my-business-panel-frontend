@@ -1,4 +1,5 @@
 import { bsToUsd, formatBs, formatUsd, usdToBs } from "@/utils/dualCurrency";
+import { useDisplayCurrency } from "@/context/CurrencyContext";
 
 interface DualCurrencyAmountBaseProps {
   /** Tasa USD -> Bs. vigente del tenant. Null/0 = sin tasa cargada. */
@@ -7,8 +8,10 @@ interface DualCurrencyAmountBaseProps {
   align?: "left" | "right";
   /** Clases del wrapper (layout: margenes, etc). */
   className?: string;
-  /** Clases de color/peso para la cifra principal en USD (default gris). */
+  /** Clases de color/peso para la cifra principal (default gris). */
   amountClassName?: string;
+  /** Oculta la linea de conversion "≈" -- solo la moneda seleccionada. */
+  hideSecondary?: boolean;
 }
 
 type DualCurrencyAmountProps =
@@ -24,11 +27,11 @@ type DualCurrencyAmountProps =
     });
 
 /**
- * Celda de tabla / linea de resumen para mostrar un monto monetario:
- * dolares como cifra principal (unidad base del sistema), bolivares como
- * equivalente en paralelo segun la tasa vigente. Acepta el monto ya
- * persistido en Bs. (Ventas) o ya persistido en USD (Compras/CxP) -- solo
- * uno de los dos, nunca ambos.
+ * Celda de tabla / linea de resumen para mostrar un monto monetario en
+ * dolares y bolivares. Cual de las dos es la cifra principal (grande,
+ * arriba) depende del toggle universal de moneda (header, ver
+ * CurrencyContext) -- no de este componente. Acepta el monto ya persistido
+ * en Bs. (Ventas) o ya persistido en USD (Compras/CxP), nunca ambos.
  */
 export function DualCurrencyAmount({
   rate,
@@ -36,8 +39,11 @@ export function DualCurrencyAmount({
   align = "left",
   className = "",
   amountClassName,
+  hideSecondary = false,
   ...props
 }: DualCurrencyAmountProps) {
+  const { displayCurrency } = useDisplayCurrency();
+
   const usd = "amountUsd" in props && props.amountUsd !== undefined
     ? props.amountUsd
     : bsToUsd(props.amountBs as number, rate);
@@ -45,7 +51,10 @@ export function DualCurrencyAmount({
     ? usdToBs(props.amountUsd, rate)
     : (props.amountBs as number);
 
-  const hasRate = usd !== null && bs !== null;
+  const primary = displayCurrency === "VES" ? bs : usd;
+  const secondary = displayCurrency === "VES" ? usd : bs;
+  const formatPrimary = displayCurrency === "VES" ? formatBs : formatUsd;
+  const formatSecondary = displayCurrency === "VES" ? formatUsd : formatBs;
 
   return (
     <div className={`${align === "right" ? "text-right" : ""} ${className}`}>
@@ -54,11 +63,15 @@ export function DualCurrencyAmount({
           amountClassName ?? (bold ? "font-semibold text-gray-900" : "text-gray-900")
         }
       >
-        {usd !== null ? formatUsd(usd) : "—"}
+        {primary !== null ? formatPrimary(primary) : "—"}
       </div>
-      <div className="text-xs text-gray-500">
-        {hasRate ? `≈ ${formatBs(bs)}` : "Sin tasa configurada"}
-      </div>
+      {!hideSecondary && (
+        <div className="text-xs text-gray-500">
+          {secondary !== null
+            ? `≈ ${formatSecondary(secondary)}`
+            : "Sin tasa configurada"}
+        </div>
+      )}
     </div>
   );
 }

@@ -34,7 +34,7 @@ export interface CollectionAlertsPageLoaderData {
   tenants: Tenant[];
 }
 
-export const getAccountsReceivablePageData =
+const fetchAccountsReceivablePageData =
   async (): Promise<AccountsReceivablePageLoaderData> =>
     withAuthCheck(async () => {
       const currentUser = await authApi.getCurrentUser();
@@ -78,7 +78,16 @@ export const getAccountsReceivablePageData =
       };
     });
 
-export const getCollectionAlertsPageData =
+/**
+ * Carga diferida: el loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getAccountsReceivablePageData = () => ({
+  data: fetchAccountsReceivablePageData(),
+});
+
+const fetchCollectionAlertsPageData =
   async (): Promise<CollectionAlertsPageLoaderData> =>
     withAuthCheck(async () => {
       const currentUser = await authApi.getCurrentUser();
@@ -141,3 +150,7 @@ export const getCollectionAlertsPageData =
         tenants,
       };
     });
+
+export const getCollectionAlertsPageData = () => ({
+  data: fetchCollectionAlertsPageData(),
+});

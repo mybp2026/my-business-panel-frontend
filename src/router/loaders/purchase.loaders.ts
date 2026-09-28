@@ -59,23 +59,30 @@ export interface PaymentAlertsPageLoaderData {
   tenants: Tenant[];
 }
 
-export const getSuppliersPageData =
-  async (): Promise<SuppliersPageLoaderData> =>
-    withAuthCheck(async () => {
-      const currentUser = await authApi.getCurrentUser();
-      const currentTenantId = currentUser?.tenant?.tenant_id ?? "";
-      const currentTenantName = currentUser?.tenant?.tenant_name ?? "Mi tenant";
+const fetchSuppliersPageData = async (): Promise<SuppliersPageLoaderData> =>
+  withAuthCheck(async () => {
+    const currentUser = await authApi.getCurrentUser();
+    const currentTenantId = currentUser?.tenant?.tenant_id ?? "";
+    const currentTenantName = currentUser?.tenant?.tenant_name ?? "Mi tenant";
 
-      const suppliers = currentTenantId
-        ? await purchaseApi.listSuppliers().catch(() => [] as Supplier[])
-        : [];
+    const suppliers = currentTenantId
+      ? await purchaseApi.listSuppliers().catch(() => [] as Supplier[])
+      : [];
 
-      return { suppliers, currentTenantId, currentTenantName };
-    });
+    return { suppliers, currentTenantId, currentTenantName };
+  });
 
-export const getPurchasesPageData =
-  async (): Promise<PurchasesPageLoaderData> =>
-    withAuthCheck(async () => {
+/**
+ * Carga diferida: el loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getSuppliersPageData = () => ({
+  data: fetchSuppliersPageData(),
+});
+
+const fetchPurchasesPageData = async (): Promise<PurchasesPageLoaderData> =>
+  withAuthCheck(async () => {
       const currentUser = await authApi.getCurrentUser();
       const isSuperuser = currentUser?.role?.role_hierarchy === 1;
       const currentTenantId = currentUser?.tenant?.tenant_id ?? "";
@@ -137,7 +144,11 @@ export const getPurchasesPageData =
       };
     });
 
-export const getAccountsPayablePageData =
+export const getPurchasesPageData = () => ({
+  data: fetchPurchasesPageData(),
+});
+
+const fetchAccountsPayablePageData =
   async (): Promise<AccountsPayablePageLoaderData> =>
     withAuthCheck(async () => {
       const currentUser = await authApi.getCurrentUser();
@@ -172,7 +183,11 @@ export const getAccountsPayablePageData =
       };
     });
 
-export const getPaymentAlertsPageData =
+export const getAccountsPayablePageData = () => ({
+  data: fetchAccountsPayablePageData(),
+});
+
+const fetchPaymentAlertsPageData =
   async (): Promise<PaymentAlertsPageLoaderData> =>
     withAuthCheck(async () => {
       const currentUser = await authApi.getCurrentUser();
@@ -233,3 +248,7 @@ export const getPaymentAlertsPageData =
         tenants,
       };
     });
+
+export const getPaymentAlertsPageData = () => ({
+  data: fetchPaymentAlertsPageData(),
+});

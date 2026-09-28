@@ -9,23 +9,20 @@ import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
 import { Table } from "@/components/ui/Table";
 import { Toast } from "@/components/ui/Toast";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
 import { useHrEmployee } from "@/context/HrEmployeeContext";
 
 import { IconCreditCard, IconPlus } from "@/assets/icons";
+
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
+import { useDisplayCurrency } from "@/context/CurrencyContext";
+import { bsToUsd, formatBs, formatUsd } from "@/utils/dualCurrency";
 
 import type { Column } from "@/interfaces/components/ui/TableProps.interface";
 import type { ToastMode } from "@/interfaces/components/ui/ToastProps.interface";
 import type { HrEmployeeDeduction } from "@/interfaces/entities/Hr.interface";
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
-
-const formatAmount = (value: number | string | null) =>
-  value === null
-    ? "—"
-    : Number(value).toLocaleString("es-VE", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
 
 const KIND_OPTIONS = [
   { value: "deuda_patrono", label: "Deuda con el patrono" },
@@ -55,6 +52,8 @@ const emptyForm = () => ({
 
 export function DeductionsSection() {
   const { employeeId } = useHrEmployee();
+  const usdRate = useCurrentExchangeRate();
+  const { displayCurrency } = useDisplayCurrency();
 
   const [deductions, setDeductions] = useState<HrEmployeeDeduction[]>([]);
   const [margin, setMargin] = useState<string | null>(null);
@@ -227,7 +226,7 @@ export function DeductionsSection() {
       label: "Saldo pendiente",
       width: "14%",
       render: (value: number | string) => (
-        <span className="font-mono">{formatAmount(value)}</span>
+        <DualCurrencyAmount amountBs={Number(value)} rate={usdRate} hideSecondary />
       ),
     },
     {
@@ -315,7 +314,13 @@ export function DeductionsSection() {
         <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-3">
           <StatCard
             label="Margen disponible este periodo (Art. 154)"
-            value={formatAmount(margin)}
+            value={
+              displayCurrency === "VES"
+                ? formatBs(Number(margin))
+                : bsToUsd(Number(margin), usdRate) !== null
+                  ? formatUsd(bsToUsd(Number(margin), usdRate)!)
+                  : "—"
+            }
             sublabel="Tope de 1/3 del salario, sin contar pensión alimentaria"
             icon={<IconCreditCard />}
             accent

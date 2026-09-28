@@ -63,10 +63,7 @@ export function AppLayout() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <AppHeader
-          onMenuOpen={() => setDrawerOpen(true)}
-          onLogout={handleLogout}
-        />
+        <AppHeader onMenuOpen={() => setDrawerOpen(true)} />
         <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>

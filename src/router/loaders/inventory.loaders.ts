@@ -12,23 +12,31 @@ export interface InventoryPageLoaderData {
   tenantId: string | null;
 }
 
-export const getInventoryPageData =
-  async (): Promise<InventoryPageLoaderData> =>
-    withAuthCheck(async () => {
-      const currentUser = await authApi.getCurrentUser();
-      const tenantId = currentUser?.tenant?.tenant_id ?? null;
+const fetchInventoryPageData = async (): Promise<InventoryPageLoaderData> =>
+  withAuthCheck(async () => {
+    const currentUser = await authApi.getCurrentUser();
+    const tenantId = currentUser?.tenant?.tenant_id ?? null;
 
-      const [warehouses, products] = await Promise.all([
-        warehouseApi.listByTenant().catch(() => [] as Warehouse[]),
-        tenantId
-          ? productApi.listByTenant(tenantId, 1, 500).catch(() => ({
-              products: [],
-              total: 0,
-              page: 1,
-              limit: 0,
-            }))
-          : Promise.resolve({ products: [], total: 0, page: 1, limit: 0 }),
-      ]);
+    const [warehouses, products] = await Promise.all([
+      warehouseApi.listByTenant().catch(() => [] as Warehouse[]),
+      tenantId
+        ? productApi.listByTenant(tenantId, 1, 500).catch(() => ({
+            products: [],
+            total: 0,
+            page: 1,
+            limit: 0,
+          }))
+        : Promise.resolve({ products: [], total: 0, page: 1, limit: 0 }),
+    ]);
 
-      return { warehouses, products, tenantId };
-    });
+    return { warehouses, products, tenantId };
+  });
+
+/**
+ * Carga diferida: el loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getInventoryPageData = () => ({
+  data: fetchInventoryPageData(),
+});

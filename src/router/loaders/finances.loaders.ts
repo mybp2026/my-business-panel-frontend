@@ -19,7 +19,7 @@ export interface AccountsOverviewPageLoaderData {
   isSuperuser: boolean;
 }
 
-export const getAccountsOverviewPageData =
+const fetchAccountsOverviewPageData =
   async (): Promise<AccountsOverviewPageLoaderData> =>
     withAuthCheck(async () => {
       const currentUser = await authApi.getCurrentUser();
@@ -59,3 +59,12 @@ export const getAccountsOverviewPageData =
         isSuperuser,
       };
     });
+
+/**
+ * Carga diferida: el loader retorna de inmediato (sin await) para que la
+ * navegación no espere la respuesta del backend. La página resuelve la
+ * promesa con <Suspense>+<Await> y muestra un loader animado mientras tanto.
+ */
+export const getAccountsOverviewPageData = () => ({
+  data: fetchAccountsOverviewPageData(),
+});
