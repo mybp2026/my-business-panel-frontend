@@ -8,7 +8,8 @@ import {
 } from "recharts";
 import type { CategoryAnalytic } from "@/interfaces/entities/FnzExpense.interface";
 import type { Currency } from "@/interfaces/entities/Currency.interface";
-import { formatInCurrency } from "@/utils/purchase";
+import type { ExchangeRate } from "@/interfaces/entities/ExchangeRate.interface";
+import { formatInCurrency, convertAmount, BASE_CURRENCY } from "@/utils/purchase";
 
 const PALETTE = [
   "#ef4444",
@@ -25,9 +26,15 @@ interface Props {
   data: CategoryAnalytic[];
   title: string;
   displayCurrency: Currency;
+  exchangeRates: ExchangeRate[];
 }
 
-export function ExpenseBreakdownChart({ data, title, displayCurrency }: Props) {
+export function ExpenseBreakdownChart({
+  data,
+  title,
+  displayCurrency,
+  exchangeRates,
+}: Props) {
   const nonZero = data.filter((d) => Number(d.total_amount) > 0);
 
   if (!nonZero.length) {
@@ -56,7 +63,15 @@ export function ExpenseBreakdownChart({ data, title, displayCurrency }: Props) {
           </Pie>
           <Tooltip
             formatter={(value) => [
-              formatInCurrency(Number(value ?? 0), displayCurrency),
+              formatInCurrency(
+                convertAmount(
+                  Number(value ?? 0),
+                  BASE_CURRENCY.currency_id,
+                  displayCurrency.currency_id,
+                  exchangeRates,
+                ),
+                displayCurrency,
+              ),
               "Total",
             ]}
           />

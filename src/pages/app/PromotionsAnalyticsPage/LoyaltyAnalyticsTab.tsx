@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useLoaderData } from "react-router-dom";
 import {
   CartesianGrid,
   Legend,
@@ -14,7 +13,6 @@ import {
 import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
 import { Table } from "@/components/ui/Table";
-import { FinanceRateBadge } from "@/components/finances/FinanceRateBadge";
 import {
   IconTrendingUp,
   IconCreditCard,
@@ -29,7 +27,7 @@ import {
   LOYALTY_INTERVAL_OPTIONS,
 } from "@/constants/loyaltyFinance";
 
-import type { LoyaltyFinancePageLoaderData } from "@/router/loaders/loyaltyFinance.loaders";
+import type { Branch } from "@/interfaces/entities/Branch.interface";
 import type {
   BucketUnit,
   LoyaltyGrowthPoint,
@@ -108,19 +106,23 @@ function GrowthChart({
   );
 }
 
-export function LoyaltyFinancePage() {
-  const { overview: initialOverview, branches, currentTenantName } =
-    useLoaderData() as LoyaltyFinancePageLoaderData;
+interface LoyaltyAnalyticsTabProps {
+  initial: LoyaltyOverview;
+  branches: Branch[];
+}
 
-  const [overview, setOverview] = useState<LoyaltyOverview>(initialOverview);
+export function LoyaltyAnalyticsTab({
+  initial,
+  branches,
+}: LoyaltyAnalyticsTabProps) {
+  const [overview, setOverview] = useState<LoyaltyOverview>(initial);
   const [interval, setInterval] = useState<LoyaltyInterval>(
-    initialOverview.interval ?? DEFAULT_LOYALTY_INTERVAL,
+    initial.interval ?? DEFAULT_LOYALTY_INTERVAL,
   );
   const [selectedBranchId, setSelectedBranchId] = useState("");
   const [loading, setLoading] = useState(false);
 
   // Intervalo + sucursal re-consultan al backend (regla del repo: filtros re-consultan).
-  // El branchId solo afecta el grafico de crecimiento; los saldos son a nivel tenant.
   async function refetch(nextInterval: LoyaltyInterval, nextBranchId: string) {
     setLoading(true);
     try {
@@ -192,38 +194,8 @@ export function LoyaltyFinancePage() {
   ];
 
   return (
-    <div className="p-6 lg:p-8">
-      {/* Hero */}
-      <section className="mb-6 rounded-4xl p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent-700">
-              Finanzas
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gray-950">
-              Puntos de fidelidad
-            </h1>
-            <p className="mt-2 text-sm leading-6 text-gray-600">
-              Valor monetario del programa de fidelizacion: los puntos activos
-              representan una obligacion futura para la empresa.
-            </p>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <FinanceRateBadge />
-            <div className="rounded-2xl border border-white/80 bg-white/85 px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
-                Contexto principal
-              </p>
-              <p className="mt-1 text-sm font-medium text-gray-900">
-                {currentTenantName}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Config + filtro de intervalo */}
-      <section className="mb-6 flex flex-wrap items-center gap-6 rounded-2xl border border-gray-200 bg-white px-5 py-4">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center gap-6 rounded-2xl border border-gray-200 bg-white px-5 py-4">
         <div className="w-64">
           <p className="mb-1.5 text-sm font-medium text-gray-700">
             Intervalo (crecimiento)
@@ -266,10 +238,9 @@ export function LoyaltyFinancePage() {
             Actualizando...
           </div>
         )}
-      </section>
+      </div>
 
-      {/* Tarjetas resumen */}
-      <section className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <StatCard
           label="Puntos activos"
           value={fmtPoints(totals.active_points)}
@@ -307,15 +278,14 @@ export function LoyaltyFinancePage() {
           icon={<IconShoppingCart />}
           sublabel="Clientes con saldo activo"
         />
-      </section>
+      </div>
 
-      {/* Crecimiento del sistema de fidelidad */}
-      <section className="mb-6 rounded-3xl border border-gray-200 bg-white p-6">
+      <div className="rounded-3xl border border-gray-200 bg-white p-6">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">
+            <h3 className="text-base font-semibold text-gray-900">
               Crecimiento del sistema de fidelidad
-            </h2>
+            </h3>
             <p className="text-sm text-gray-500">
               Puntos generados frente a puntos canjeados en el periodo
               seleccionado.
@@ -341,13 +311,12 @@ export function LoyaltyFinancePage() {
           )}
         </div>
         <GrowthChart points={overview.growth} unit={overview.bucket_unit} />
-      </section>
+      </div>
 
-      {/* Clientes con mas puntos */}
-      <section className="rounded-3xl border border-gray-200 bg-white p-6">
-        <h2 className="mb-1 text-base font-semibold text-gray-900">
+      <div className="rounded-3xl border border-gray-200 bg-white p-6">
+        <h3 className="mb-1 text-base font-semibold text-gray-900">
           Clientes con mas puntos acumulados
-        </h2>
+        </h3>
         <p className="mb-4 text-sm text-gray-500">
           Top de clientes por saldo de puntos activo.
         </p>
@@ -356,7 +325,7 @@ export function LoyaltyFinancePage() {
           data={overview.top_customers}
           emptyMessage="Aun no hay clientes con puntos acumulados"
         />
-      </section>
+      </div>
     </div>
   );
 }

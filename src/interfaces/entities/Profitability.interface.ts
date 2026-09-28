@@ -41,6 +41,15 @@ export interface ExpenseComponentRow {
   amount: string; // gastos en currency_id
 }
 
+export interface ExpenseCategoryComponentRow {
+  branch_id: string;
+  bucket_start: string;
+  currency_id: number; // moneda del gasto
+  category_id: string | null;
+  category_name: string | null; // null = sin categoria asignada
+  amount: string; // gastos en currency_id
+}
+
 // Respuesta cruda del endpoint GET /finances/profitability.
 export interface ProfitabilityRawData {
   interval: ProfitabilityInterval;
@@ -50,6 +59,14 @@ export interface ProfitabilityRawData {
   sales: SalesComponentRow[];
   returns: ReturnsComponentRow[];
   expenses: ExpenseComponentRow[];
+  expense_categories: ExpenseCategoryComponentRow[];
+}
+
+// Desglose de gastos por categoria en el periodo, ya en moneda destino.
+export interface ExpenseCategoryBreakdown {
+  category_id: string | null;
+  category_name: string;
+  amount: number;
 }
 
 // ─── Tipos computados (salida del pipeline) ─────────────────────────────────
@@ -69,6 +86,7 @@ export interface ProfitabilitySeries {
   total_vn: number;
   total_ub: number;
   total_un: number;
+  expense_breakdown: ExpenseCategoryBreakdown[];
 }
 
 export interface BranchProfitability extends ProfitabilitySeries {

@@ -13,7 +13,7 @@ export interface LoyaltyFinancePageLoaderData {
   currentTenantName: string;
 }
 
-const emptyOverview: LoyaltyOverview = {
+export const emptyOverview: LoyaltyOverview = {
   interval: DEFAULT_LOYALTY_INTERVAL,
   range_start: new Date().toISOString(),
   bucket_unit: "day",

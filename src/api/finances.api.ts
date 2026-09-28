@@ -179,6 +179,7 @@ export const financesApi = {
     startDate?: string;
     endDate?: string;
     groupBy?: CashFlowGroupBy;
+    branchId?: string;
   }): Promise<CashFlowData> {
     const res = await api.get<ApiResponse<CashFlowData>>("/finances/cash-flow", {
       params,
