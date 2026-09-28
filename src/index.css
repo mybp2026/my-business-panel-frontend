@@ -143,6 +143,25 @@ body {
   color: #111827;
 }
 
+@keyframes logo-wedge-pulse {
+  0% {
+    opacity: 0.25;
+  }
+  12% {
+    opacity: 1;
+  }
+  35% {
+    opacity: 0.25;
+  }
+  100% {
+    opacity: 0.25;
+  }
+}
+
+.animate-logo-wedge {
+  animation: logo-wedge-pulse 1.8s linear infinite;
+}
+
 .text-accent-200 {
   color: var(--accent-200);
 }
