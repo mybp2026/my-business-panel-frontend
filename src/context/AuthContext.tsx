@@ -9,10 +9,19 @@ import {
   useRef,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import { authApi } from "../api/auth.api";
+import { authApi, HAS_SESSION_KEY } from "../api/auth.api";
 import { clockingApi } from "@/api/clocking.api";
 import { employeeApi } from "@/api/employee.api";
 import { UnauthorizedError } from "@/api/errors/UnauthorizedError";
+import { NetworkError } from "@/api/errors/NetworkError";
+
+function hasStoredSession(): boolean {
+  try {
+    return localStorage.getItem(HAS_SESSION_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
 import type { CurrentUserResponse } from "../interfaces/api/responses/CurrentUserResponse.interface";
 import type { LoginRequest } from "../interfaces/api/requests/LoginRequest.interface";
 
@@ -71,6 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       if (error instanceof UnauthorizedError) {
         handleUnauthorizedError();
+      } else if (error instanceof NetworkError) {
+        // Falla de red/backend caido: mantener el estado actual, no desloguear
       } else {
         setUser(null);
       }
@@ -78,6 +89,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [handleUnauthorizedError]);
 
   useEffect(() => {
+    // Sin "Recordarme" activo en un login previo, no hay refresh token que
+    // valga la pena intentar: evita un 401 innecesario al abrir la app.
+    if (!hasStoredSession()) {
+      setIsLoading(false);
+      return;
+    }
     refreshUser().finally(() => setIsLoading(false));
   }, [refreshUser]);
 

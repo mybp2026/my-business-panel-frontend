@@ -11,6 +11,7 @@ import { Input } from '../../components/ui/Input';
 const schema = z.object({
   email: z.string().min(1, 'El email es requerido').email('Email inválido'),
   password: z.string().min(1, 'La contraseña es requerida'),
+  rememberMe: z.boolean().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -24,7 +25,10 @@ export function LoginPage() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) });
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { rememberMe: true },
+  });
 
   const onSubmit = async (values: FormValues) => {
     setServerError('');
@@ -95,6 +99,15 @@ export function LoginPage() {
             error={errors.password?.message}
             {...register('password')}
           />
+
+          <label className="flex items-center gap-2 text-sm text-gray-600 select-none">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-gray-300"
+              {...register('rememberMe')}
+            />
+            Recordarme
+          </label>
 
           <Button type="submit" fullWidth loading={isSubmitting} size="lg" className="mt-2">
             Ingresar
