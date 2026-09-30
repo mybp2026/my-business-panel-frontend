@@ -40,9 +40,13 @@ export const hrSettlementApi = {
   async preview(
     employeeId: string,
     endDate: string,
+    simulationDate?: string,
   ): Promise<HrSettlementPreview> {
+    const simulationParam = simulationDate
+      ? `&simulationDate=${simulationDate}`
+      : "";
     const response = await fetch(
-      `${url}/settlement/preview/${employeeId}?endDate=${endDate}&breakdown=true`,
+      `${url}/settlement/preview/${employeeId}?endDate=${endDate}&breakdown=true${simulationParam}`,
       {
         method: "GET",
         headers: { "Content-Type": "application/json" },
