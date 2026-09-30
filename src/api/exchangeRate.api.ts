@@ -12,7 +12,11 @@ const toLegacyShape = (eff: EffectiveExchangeRate): ExchangeRate => ({
   from_currency_id: eff.from_currency_id,
   to_currency_id: eff.to_currency_id,
   rate: eff.effective_rate,
-  effective_at: eff.base_at,
+  effective_at:
+    (eff.auto_update ? eff.base_at : eff.manual_at) ??
+    eff.base_at ??
+    eff.manual_at ??
+    "",
 });
 
 /**
@@ -74,6 +78,26 @@ export const exchangeRateApi = {
     } catch {
       return null;
     }
+  },
+
+  /**
+   * Activa/desactiva la actualizacion automatica de tasa del tenant. Con
+   * false el tenant ignora la tasa base (BCV) y opera con su tasa manual.
+   */
+  async setAutoUpdate(autoUpdate: boolean) {
+    const response = await api.put<
+      ApiResponse<{ tenant_id: string; auto_update: boolean }>
+    >("/exchange-rate/auto-update", { auto_update: autoUpdate });
+    return response.data.data;
+  },
+
+  /** Carga la tasa manual del tenant (aplica con auto_update = false). */
+  async setManualRate(rate: number) {
+    const response = await api.post<ApiResponse<{ manual_rate_id: string }>>(
+      "/exchange-rate/manual",
+      { rate },
+    );
+    return response.data.data;
   },
 
   /** Carga el diferencial del tenant. 0 lo restablece. */
