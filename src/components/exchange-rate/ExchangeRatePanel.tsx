@@ -65,6 +65,7 @@ export function ExchangeRatePanel({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [baseInput, setBaseInput] = useState("");
   const [deltaInput, setDeltaInput] = useState("");
+  const [manualInput, setManualInput] = useState("");
   const [toast, setToast] = useState<{
     mode: ToastMode;
     message: string;
@@ -81,8 +82,9 @@ export function ExchangeRatePanel({
       setEffective(eff);
       setLedger(led);
       if (eff) {
-        setBaseInput(String(Number(eff.base_rate)));
+        setBaseInput(eff.base_rate ? String(Number(eff.base_rate)) : "");
         setDeltaInput(String(Number(eff.delta)));
+        setManualInput(eff.manual_rate ? String(Number(eff.manual_rate)) : "");
       }
     } catch (error) {
       setToast({
@@ -149,6 +151,59 @@ export function ExchangeRatePanel({
           error instanceof Error
             ? error.message
             : "Error guardando el diferencial",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveManual = async () => {
+    const rate = Number(manualInput);
+    if (!rate || rate <= 0) {
+      setToast({ mode: "error", message: "Ingresa una tasa mayor a 0" });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await exchangeRateApi.setManualRate(rate);
+      await reload();
+      setToast({
+        mode: "success",
+        message: "Tasa manual registrada",
+      });
+    } catch (error) {
+      setToast({
+        mode: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Error guardando la tasa manual",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleAutoUpdate = async () => {
+    if (!effective) return;
+    const next = !effective.auto_update;
+    setIsSubmitting(true);
+    try {
+      await exchangeRateApi.setAutoUpdate(next);
+      await reload();
+      setToast({
+        mode: "success",
+        message: next
+          ? "Actualización automática activada"
+          : "Actualización automática desactivada: se usa tu tasa manual",
+      });
+    } catch (error) {
+      setToast({
+        mode: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Error cambiando el modo de la tasa",
       });
     } finally {
       setIsSubmitting(false);
@@ -239,10 +294,12 @@ export function ExchangeRatePanel({
       <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-3">
         <StatCard
           label="Tasa base (BCV)"
-          value={effective ? fmt(effective.base_rate) : "—"}
+          value={effective?.base_rate ? fmt(effective.base_rate) : "—"}
           sublabel={
-            effective
-              ? `Vigente desde ${fmtDateTime(effective.base_at)}`
+            effective?.base_at
+              ? `Vigente desde ${fmtDateTime(effective.base_at)}${
+                  effective.auto_update ? "" : " (no aplica a este tenant)"
+                }`
               : "Sin valor vigente"
           }
           icon={<IconSettings />}
@@ -255,22 +312,86 @@ export function ExchangeRatePanel({
               : "—"
           }
           sublabel={
-            effective?.delta_at
-              ? `Aplicado ${fmtDateTime(effective.delta_at)}`
-              : "Sin diferencial (0)"
+            effective && !effective.auto_update
+              ? "No aplica en modo manual"
+              : effective?.delta_at
+                ? `Aplicado ${fmtDateTime(effective.delta_at)}`
+                : "Sin diferencial (0)"
           }
           icon={<IconCreditCard />}
         />
         <StatCard
           label="Tasa aplicada"
           value={effective ? fmt(effective.effective_rate) : "—"}
-          sublabel="Bs. por USD en todo el sistema"
+          sublabel={
+            effective && !effective.auto_update
+              ? "Tasa manual del tenant"
+              : "Bs. por USD en todo el sistema"
+          }
           icon={<IconCreditCard />}
           accent
         />
       </div>
 
-      {(isSuperuser || canEditDelta) && (
+      {canEditDelta && effective && (
+        <div className="mb-6 rounded-2xl border border-gray-300 bg-white p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="mb-1 text-base font-semibold text-gray-900">
+                Actualización automática de tasa
+              </h3>
+              <p className="text-sm text-gray-500">
+                Activa: el tenant sigue la tasa del BCV más su diferencial.
+                Desactivada: el tenant usa únicamente la tasa manual que
+                registres aquí y no le afecta la sincronización automática.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={effective.auto_update}
+              aria-label="Actualización automática de tasa"
+              disabled={isSubmitting}
+              onClick={handleToggleAutoUpdate}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:opacity-50 ${
+                effective.auto_update ? "bg-emerald-600" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  effective.auto_update ? "translate-x-5" : "translate-x-0.5"
+                }`}
+              />
+            </button>
+          </div>
+
+          <div className="mt-4 flex items-end gap-3">
+            <Input
+              label="Tasa manual (Bs. por USD)"
+              type="number"
+              step="0.000001"
+              min="0"
+              value={manualInput}
+              onChange={(e) => setManualInput(e.target.value)}
+            />
+            <Button
+              variant="secondary"
+              onClick={handleSaveManual}
+              loading={isSubmitting}
+            >
+              Registrar
+            </Button>
+          </div>
+          {effective.auto_update && (
+            <p className="mt-2 text-xs text-gray-500">
+              Puedes dejar una tasa manual lista; solo se usará al desactivar
+              la actualización automática.
+            </p>
+          )}
+        </div>
+      )}
+
+      {(isSuperuser || (canEditDelta && effective?.auto_update !== false)) && (
         <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
           {isSuperuser && (
             <div className="rounded-2xl border border-gray-300 bg-white p-6">
@@ -300,7 +421,7 @@ export function ExchangeRatePanel({
             </div>
           )}
 
-          {canEditDelta && (
+          {canEditDelta && effective?.auto_update !== false && (
             <div className="rounded-2xl border border-gray-300 bg-white p-6">
               <h3 className="mb-1 text-base font-semibold text-gray-900">
                 Diferencial

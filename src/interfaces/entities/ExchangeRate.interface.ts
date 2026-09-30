@@ -1,14 +1,19 @@
 /**
  * Tasa de cambio USD -> VES (sistema bimonetario Venezuela).
  * La tasa base es global (BCV); el diferencial es por tenant.
- * Tasa efectiva = base + delta.
+ * Con actualizacion automatica: tasa efectiva = base + delta. Sin ella
+ * (auto_update = false): tasa efectiva = tasa manual del tenant, sin base
+ * ni diferencial.
  */
 export interface EffectiveExchangeRate {
-  base_rate: string;
+  base_rate: string | null;
   delta: string;
   effective_rate: string;
-  base_at: string;
+  base_at: string | null;
   delta_at: string | null;
+  auto_update: boolean;
+  manual_rate: string | null;
+  manual_at: string | null;
   from_currency_id: number;
   to_currency_id: number;
 }
