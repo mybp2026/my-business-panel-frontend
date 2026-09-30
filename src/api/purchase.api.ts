@@ -282,6 +282,18 @@ export const purchaseApi = {
     return json<PurchaseOrderDetail>(res, "Error al confirmar la recepción de mercancía");
   },
 
+  async cancelGoodsReceipt(goodsReceiptId: string): Promise<PurchaseOrderDetail> {
+    const res = await fetch(
+      `${url}/purchase/goods-receipt/${goodsReceiptId}`,
+      {
+        method: "DELETE",
+        credentials: "include",
+      },
+    );
+
+    return json<PurchaseOrderDetail>(res, "Error al cancelar la recepción de mercancía");
+  },
+
   async getMatching(orderId: string): Promise<PurchaseMatching> {
     const res = await fetch(`${url}/purchase/${orderId}/matching`, {
       method: "GET",

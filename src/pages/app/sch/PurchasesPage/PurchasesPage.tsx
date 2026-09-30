@@ -54,6 +54,8 @@ import {
   formatDate,
   getOrderStatusTone,
   getPayableStatusTone,
+  translateOrderStatus,
+  translatePayableStatus,
 } from "@/utils/purchase";
 
 interface PurchaseItemFormRow {
@@ -61,6 +63,8 @@ interface PurchaseItemFormRow {
   quantity_ordered: string;
   variant_name?: string;
   sku?: string;
+  /** Costo (USD) resuelto desde general_schema.product_variant.cost_price al seleccionar el producto. */
+  unit_cost?: number;
 }
 
 interface PurchaseFormState {
@@ -359,9 +363,10 @@ function PurchasesPageContent({
     index: number,
     selection: ProductVariantSelection,
   ) => {
-    // El costo unitario ya no se captura aqui: create_purchase_order() lo
-    // resuelve server-side desde general_schema.product_variant.cost_price
-    // (USD) al crear la orden.
+    // El costo unitario que llega aqui (priceField="cost_price" en el combo)
+    // es solo para mostrarle al usuario lo que create_purchase_order() va a
+    // resolver server-side desde product_variant.cost_price -- no se manda
+    // al backend, que lo vuelve a resolver el mismo por su cuenta.
     setFormData((prev) => {
       const items = prev.items.map((item, itemIndex) =>
         itemIndex === index
@@ -370,6 +375,7 @@ function PurchasesPageContent({
               product_variant_id: selection.product_variant_id,
               variant_name: selection.variant_name,
               sku: selection.sku,
+              unit_cost: selection.unit_price,
             }
           : item,
       );
@@ -389,27 +395,89 @@ function PurchasesPageContent({
   const handleRegisterPayment = async (
     payload: CreatePurchasePaymentRequest,
   ) => {
-    const result = await purchaseApi.registerPayment(payload);
-    // Refresh the open detail and the row in the table.
-    setSelectedOrder(result.order);
-    updateOrderRow(result.order);
-    setToast({
-      mode: "success",
-      message: "Abono registrado correctamente",
-    });
+    const previousOrder = selectedOrder;
+
+    // Optimista: refleja el abono de inmediato, se corrige (o revierte) con
+    // la respuesta real del servidor.
+    if (previousOrder) {
+      const optimisticAmountPaid =
+        Number(previousOrder.amount_paid ?? 0) + payload.amount_paid;
+      const optimisticBalance = Math.max(
+        Number(previousOrder.total_amount ?? 0) - optimisticAmountPaid,
+        0,
+      );
+      const optimisticOrder: PurchaseOrderDetail = {
+        ...previousOrder,
+        amount_paid: optimisticAmountPaid,
+        balance_due: optimisticBalance,
+        is_paid: optimisticBalance <= 0,
+      };
+      setSelectedOrder(optimisticOrder);
+      updateOrderRow(optimisticOrder);
+    }
+
+    try {
+      const result = await purchaseApi.registerPayment(payload);
+      setSelectedOrder(result.order);
+      updateOrderRow(result.order);
+      setToast({
+        mode: "success",
+        message: "Abono registrado correctamente",
+      });
+    } catch (error) {
+      if (previousOrder) {
+        setSelectedOrder(previousOrder);
+        updateOrderRow(previousOrder);
+      }
+      throw error;
+    }
   };
 
   const handleUpdatePayment = async (
     paymentId: string,
     payload: Partial<CreatePurchasePaymentRequest>,
   ) => {
-    const result = await purchaseApi.updatePayment(paymentId, payload);
-    setSelectedOrder(result.order);
-    updateOrderRow(result.order);
-    setToast({
-      mode: "success",
-      message: "Abono actualizado correctamente",
-    });
+    const previousOrder = selectedOrder;
+
+    if (previousOrder && payload.amount_paid !== undefined) {
+      const previousPayment = previousOrder.payments.find(
+        (payment) => payment.purchase_order_payment_id === paymentId,
+      );
+      if (previousPayment) {
+        const delta =
+          Number(payload.amount_paid) - Number(previousPayment.amount_paid);
+        const optimisticAmountPaid =
+          Number(previousOrder.amount_paid ?? 0) + delta;
+        const optimisticBalance = Math.max(
+          Number(previousOrder.total_amount ?? 0) - optimisticAmountPaid,
+          0,
+        );
+        const optimisticOrder: PurchaseOrderDetail = {
+          ...previousOrder,
+          amount_paid: optimisticAmountPaid,
+          balance_due: optimisticBalance,
+          is_paid: optimisticBalance <= 0,
+        };
+        setSelectedOrder(optimisticOrder);
+        updateOrderRow(optimisticOrder);
+      }
+    }
+
+    try {
+      const result = await purchaseApi.updatePayment(paymentId, payload);
+      setSelectedOrder(result.order);
+      updateOrderRow(result.order);
+      setToast({
+        mode: "success",
+        message: "Abono actualizado correctamente",
+      });
+    } catch (error) {
+      if (previousOrder) {
+        setSelectedOrder(previousOrder);
+        updateOrderRow(previousOrder);
+      }
+      throw error;
+    }
   };
 
   return (
@@ -523,22 +591,22 @@ function PurchasesPageContent({
           { key: "supplier_name", label: "Proveedor", width: "16%" },
           {
             key: "purchase_order_status_name",
-            label: "Estado",
+            label: "Envío",
             width: "12%",
             render: (value) => (
               <Badge variant={getOrderStatusTone(String(value))}>
-                {String(value)}
+                {translateOrderStatus(String(value))}
               </Badge>
             ),
           },
           {
             key: "account_payable_status_name",
-            label: "CxP",
+            label: "Cuenta",
             width: "12%",
             render: (value) =>
               value ? (
                 <Badge variant={getPayableStatusTone(String(value))}>
-                  {String(value)}
+                  {translatePayableStatus(String(value))}
                 </Badge>
               ) : (
                 "—"
@@ -727,22 +795,31 @@ function PurchasesPageContent({
                   key={`purchase-item-${index}`}
                   className="grid gap-3 rounded-2xl border border-white bg-white p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] md:grid-cols-[1.8fr_0.8fr_auto]"
                 >
-                  <ProductVariantComboBox
-                    tenantId={user?.tenant.tenant_id || ""}
-                    value={item.product_variant_id}
-                    displayValue={
-                      item.sku
-                        ? `${item.variant_name} (${item.sku})`
-                        : item.variant_name
-                    }
-                    onChange={(selection) =>
-                      handleProductSelect(index, selection)
-                    }
-                    onClear={() => handleProductClear(index)}
-                    label={`Producto ${index + 1}`}
-                    placeholder="Buscar por SKU o nombre"
-                    required
-                  />
+                  <div>
+                    <ProductVariantComboBox
+                      tenantId={user?.tenant.tenant_id || ""}
+                      value={item.product_variant_id}
+                      displayValue={
+                        item.sku
+                          ? `${item.variant_name} (${item.sku})`
+                          : item.variant_name
+                      }
+                      onChange={(selection) =>
+                        handleProductSelect(index, selection)
+                      }
+                      onClear={() => handleProductClear(index)}
+                      label={`Producto ${index + 1}`}
+                      placeholder="Buscar por SKU o nombre"
+                      priceField="cost_price"
+                      required
+                    />
+                    {item.product_variant_id && item.unit_cost === 0 && (
+                      <p className="mt-1 text-xs font-medium text-amber-600">
+                        Este producto no tiene costo configurado (Bs./USD 0)
+                        en el módulo General — la orden se creará en $0.
+                      </p>
+                    )}
+                  </div>
 
                   <Input
                     label="Cantidad"
@@ -788,33 +865,6 @@ function PurchasesPageContent({
               <p className="mt-3 text-xs text-red-500">{formErrors.items}</p>
             )}
           </section>
-
-          <div className="rounded-2xl border border-gray-200 bg-white p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
-              Resumen rápido
-            </p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <SummaryMetric
-                label="Líneas válidas"
-                value={String(
-                  formData.items.filter(
-                    (item) =>
-                      item.product_variant_id &&
-                      Number(item.quantity_ordered) > 0,
-                  ).length,
-                )}
-              />
-              <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500">
-                  Costo e impuesto
-                </p>
-                <p className="mt-1 text-xs text-gray-600">
-                  Se calculan al confirmar, tomando el costo (USD) configurado
-                  para cada producto en el módulo General.
-                </p>
-              </div>
-            </div>
-          </div>
 
           {isSuperuser && (
             <p className="text-xs text-gray-500">
@@ -870,17 +920,6 @@ function PurchasesPageContent({
           />
         )}
       </Modal>
-    </div>
-  );
-}
-
-function SummaryMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-semibold text-gray-900">{value}</p>
     </div>
   );
 }

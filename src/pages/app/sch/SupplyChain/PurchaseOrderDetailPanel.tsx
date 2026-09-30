@@ -13,6 +13,8 @@ import { formatBs, usdToBs } from "@/utils/dualCurrency";
 
 import type {
   GoodsReceiptDetail,
+  MatchingAmountBreakdown,
+  NumericLike,
   PaymentMethodCatalog,
   PurchaseDispute,
   PurchaseMatching,
@@ -28,6 +30,8 @@ import {
   formatPaymentMethodName,
   getOrderStatusTone,
   getPayableStatusTone,
+  translateOrderStatus,
+  translatePayableStatus,
 } from "@/utils/purchase";
 import { exchangeRateApi } from "@/api/exchangeRate.api";
 import { currencies } from "@/constants/payment-methods";
@@ -42,6 +46,7 @@ const INVOICE_EDITABLE_ORDER_STATUS_ID = 2;
 // Estado inicial de la orden, antes de marcarla como enviada.
 const PENDING_ORDER_STATUS_ID = 1;
 const SHIPPED_ORDER_STATUS_ID = 2;
+const DELIVERED_ORDER_STATUS_ID = 3;
 
 const disputeTypeLabels: Record<string, string> = {
   MISSING_GOODS: "Mercancía incompleta",
@@ -210,6 +215,14 @@ export function PurchaseOrderDetailPanel({
   const submitMarkAsShipped = async () => {
     setMarkShippedError(null);
     setIsMarkingShipped(true);
+
+    const previousOrder = order;
+    onOrderUpdated?.({
+      ...order,
+      purchase_order_status_id: SHIPPED_ORDER_STATUS_ID,
+      purchase_order_status_name: "Shipped",
+    });
+
     try {
       const updatedOrder = await purchaseApi.updateOrderStatus(
         order.purchase_order_id,
@@ -217,6 +230,7 @@ export function PurchaseOrderDetailPanel({
       );
       onOrderUpdated?.(updatedOrder);
     } catch (err) {
+      onOrderUpdated?.(previousOrder);
       setMarkShippedError(
         err instanceof Error
           ? err.message
@@ -248,7 +262,7 @@ export function PurchaseOrderDetailPanel({
   >({});
   const [isLoadingReceipt, setIsLoadingReceipt] = useState(false);
   const [isStartingReceipt, setIsStartingReceipt] = useState(false);
-  const [isSavingReceiptItems, setIsSavingReceiptItems] = useState(false);
+  const [isCancelingReceipt, setIsCancelingReceipt] = useState(false);
   const [isConfirmingReceipt, setIsConfirmingReceipt] = useState(false);
   const [receiptError, setReceiptError] = useState<string | null>(null);
 
@@ -304,7 +318,31 @@ export function PurchaseOrderDetailPanel({
     }
   };
 
-  const submitSaveReceiptItems = async () => {
+  const submitCancelReceipt = async () => {
+    if (!activeReceipt) return;
+    setReceiptError(null);
+    setIsCancelingReceipt(true);
+    try {
+      const updatedOrder = await purchaseApi.cancelGoodsReceipt(
+        activeReceipt.goods_receipt_id,
+      );
+      setActiveReceipt(null);
+      onOrderUpdated?.(updatedOrder);
+    } catch (err) {
+      setReceiptError(
+        err instanceof Error
+          ? err.message
+          : "Error al cancelar la recepción",
+      );
+    } finally {
+      setIsCancelingReceipt(false);
+    }
+  };
+
+  // Guarda la correccion de cantidades y confirma en un solo paso: ya no
+  // hay boton separado de "guardar correccion" -- si algo sale mal, la
+  // recepcion se puede cancelar (submitCancelReceipt) y reiniciar.
+  const submitConfirmReceipt = async () => {
     if (!activeReceipt) return;
     const items = activeReceipt.items.map((item) => ({
       product_variant_id: item.product_variant_id,
@@ -319,35 +357,26 @@ export function PurchaseOrderDetailPanel({
     }
 
     setReceiptError(null);
-    setIsSavingReceiptItems(true);
-    try {
-      const receipt = await purchaseApi.updateGoodsReceiptItems(
-        activeReceipt.goods_receipt_id,
-        { items },
-      );
-      loadReceiptIntoForm(receipt);
-    } catch (err) {
-      setReceiptError(
-        err instanceof Error
-          ? err.message
-          : "Error al corregir los items recibidos",
-      );
-    } finally {
-      setIsSavingReceiptItems(false);
-    }
-  };
-
-  const submitConfirmReceipt = async () => {
-    if (!activeReceipt) return;
-    setReceiptError(null);
     setIsConfirmingReceipt(true);
+
+    const previousOrder = order;
+    onOrderUpdated?.({
+      ...order,
+      purchase_order_status_id: DELIVERED_ORDER_STATUS_ID,
+      purchase_order_status_name: "Delivered",
+    });
+
     try {
+      await purchaseApi.updateGoodsReceiptItems(activeReceipt.goods_receipt_id, {
+        items,
+      });
       const updatedOrder = await purchaseApi.confirmGoodsReceipt(
         activeReceipt.goods_receipt_id,
       );
       setActiveReceipt(null);
       onOrderUpdated?.(updatedOrder);
     } catch (err) {
+      onOrderUpdated?.(previousOrder);
       setReceiptError(
         err instanceof Error
           ? err.message
@@ -660,7 +689,7 @@ export function PurchaseOrderDetailPanel({
                 <Badge
                   variant={getOrderStatusTone(order.purchase_order_status_name)}
                 >
-                  {order.purchase_order_status_name}
+                  {translateOrderStatus(order.purchase_order_status_name)}
                 </Badge>
                 {order.account_payable_status_name && (
                   <Badge
@@ -668,7 +697,7 @@ export function PurchaseOrderDetailPanel({
                       order.account_payable_status_name,
                     )}
                   >
-                    {order.account_payable_status_name}
+                    {translatePayableStatus(order.account_payable_status_name)}
                   </Badge>
                 )}
                 {isPendingOrder && (
@@ -1441,12 +1470,13 @@ export function PurchaseOrderDetailPanel({
                   <div className="flex flex-wrap justify-end gap-2 border-t border-blue-200 pt-2">
                     <Button
                       type="button"
-                      variant="secondary"
+                      variant="dangerOutline"
                       size="sm"
-                      onClick={submitSaveReceiptItems}
-                      loading={isSavingReceiptItems}
+                      onClick={submitCancelReceipt}
+                      loading={isCancelingReceipt}
+                      disabled={isConfirmingReceipt}
                     >
-                      Guardar corrección
+                      Cancelar recepción
                     </Button>
                     <Button
                       type="button"
@@ -1454,6 +1484,7 @@ export function PurchaseOrderDetailPanel({
                       size="sm"
                       onClick={submitConfirmReceipt}
                       loading={isConfirmingReceipt}
+                      disabled={isCancelingReceipt}
                     >
                       Confirmar recepción
                     </Button>
@@ -1484,7 +1515,7 @@ export function PurchaseOrderDetailPanel({
               />
             </Section>
 
-            <Section title="Three-way matching">
+            <Section title="Factura vs. recepción">
               {matching?.matching_found ? (
                 <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1512,6 +1543,71 @@ export function PurchaseOrderDetailPanel({
                       </Badge>
                     </div>
                   </div>
+
+                  {matching.amount_comparison && matching.quantity_comparison && (
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className={headerCell}>Origen</th>
+                            <th className={headerCell}>Cantidad</th>
+                            <th className={headerCell}>Subtotal</th>
+                            <th className={headerCell}>Impuesto</th>
+                            <th className={headerCell}>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <MatchingRow
+                            label="Orden"
+                            qty={matching.quantity_comparison.order_qty}
+                            amounts={matching.amount_comparison.order}
+                          />
+                          <MatchingRow
+                            label="Factura"
+                            qty={matching.quantity_comparison.invoice_qty}
+                            amounts={matching.amount_comparison.invoice}
+                          />
+                          <MatchingRow
+                            label="Recepción"
+                            qty={matching.quantity_comparison.receipt_qty}
+                            amounts={matching.amount_comparison.receipt}
+                          />
+                        </tbody>
+                      </table>
+
+                      {!matching.is_matched && (
+                        <div className="mt-3 grid gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 sm:grid-cols-3">
+                          <p>
+                            Dif. orden vs factura:{" "}
+                            <span className="font-mono font-semibold">
+                              {formatCurrency(
+                                matching.amount_comparison.differences
+                                  .order_vs_invoice_total,
+                              )}
+                            </span>
+                          </p>
+                          <p>
+                            Dif. orden vs recepción:{" "}
+                            <span className="font-mono font-semibold">
+                              {formatCurrency(
+                                matching.amount_comparison.differences
+                                  .order_vs_receipt_total,
+                              )}
+                            </span>
+                          </p>
+                          <p>
+                            Dif. factura vs recepción:{" "}
+                            <span className="font-mono font-semibold">
+                              {formatCurrency(
+                                matching.amount_comparison.differences
+                                  .invoice_vs_receipt_total,
+                              )}
+                            </span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-sm text-gray-500">
@@ -1788,6 +1884,32 @@ function AmountRow({
         {value}
       </div>
     </div>
+  );
+}
+
+function MatchingRow({
+  label,
+  qty,
+  amounts,
+}: {
+  label: string;
+  qty?: NumericLike | null;
+  amounts: MatchingAmountBreakdown;
+}) {
+  return (
+    <tr className="border-t border-gray-200">
+      <td className={`${cell} font-semibold text-gray-900`}>{label}</td>
+      <td className={cell}>{qty ?? "—"}</td>
+      <td className={cell}>
+        {amounts.subtotal != null ? formatCurrency(amounts.subtotal) : "—"}
+      </td>
+      <td className={cell}>
+        {amounts.tax != null ? formatCurrency(amounts.tax) : "—"}
+      </td>
+      <td className={`${cell} font-semibold`}>
+        {amounts.total != null ? formatCurrency(amounts.total) : "—"}
+      </td>
+    </tr>
   );
 }
 
