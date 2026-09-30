@@ -12,6 +12,7 @@ import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
 import { formatBs, usdToBs } from "@/utils/dualCurrency";
 
 import type {
+  GoodsReceiptDetail,
   PaymentMethodCatalog,
   PurchaseDispute,
   PurchaseMatching,
@@ -63,6 +64,13 @@ interface PurchaseOrderDetailPanelProps {
     paymentId: string,
     payload: Partial<CreatePurchasePaymentRequest>,
   ) => Promise<void> | void;
+  /**
+   * Called with the fresh order after an action that changes it server-side
+   * outside the panel's own local state (ej. confirmar recepcion de
+   * mercancia, que mueve la orden a "entregada"). El padre suele guardar la
+   * orden seleccionada en su propio estado (ver PurchasesPage/AccountsPayablePage).
+   */
+  onOrderUpdated?: (order: PurchaseOrderDetail) => void;
 }
 
 const cell = "px-3 py-2 text-sm text-gray-700 align-top";
@@ -76,6 +84,7 @@ export function PurchaseOrderDetailPanel({
   paymentMethods,
   onRegisterPayment,
   onUpdatePayment,
+  onOrderUpdated,
 }: PurchaseOrderDetailPanelProps) {
   // Tasa para mostrar USD -> Bs. en paralelo (igual que POS/Ventas). Distinta
   // del `exchangeRate` local de mas abajo, que es para el conversor en vivo
@@ -188,6 +197,134 @@ export function PurchaseOrderDetailPanel({
 
   const isInvoiceEditable =
     order.purchase_order_status_id === INVOICE_EDITABLE_ORDER_STATUS_ID;
+
+  // Recepcion de mercancia: start -> corregir items -> confirm. La orden
+  // debe estar "enviada" (Shipped) para poder iniciar. activeReceipt vive
+  // fuera de `order.goods_receipts` porque necesita el detalle con items,
+  // que el listado resumido de la orden no trae.
+  const isShippedForReceiving =
+    order.purchase_order_status_id === INVOICE_EDITABLE_ORDER_STATUS_ID;
+  const pendingReceiptSummary = order.goods_receipts.find(
+    (r) => r.status === "PENDING",
+  );
+
+  const [activeReceipt, setActiveReceipt] = useState<GoodsReceiptDetail | null>(
+    null,
+  );
+  const [receiptItemEdits, setReceiptItemEdits] = useState<
+    Record<string, string>
+  >({});
+  const [isLoadingReceipt, setIsLoadingReceipt] = useState(false);
+  const [isStartingReceipt, setIsStartingReceipt] = useState(false);
+  const [isSavingReceiptItems, setIsSavingReceiptItems] = useState(false);
+  const [isConfirmingReceipt, setIsConfirmingReceipt] = useState(false);
+  const [receiptError, setReceiptError] = useState<string | null>(null);
+
+  const loadReceiptIntoForm = (receipt: GoodsReceiptDetail) => {
+    setActiveReceipt(receipt);
+    setReceiptItemEdits(
+      Object.fromEntries(
+        receipt.items.map((item) => [
+          item.product_variant_id,
+          String(item.quantity_received),
+        ]),
+      ),
+    );
+  };
+
+  useEffect(() => {
+    if (!pendingReceiptSummary) {
+      setActiveReceipt(null);
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingReceipt(true);
+    purchaseApi
+      .getGoodsReceipt(pendingReceiptSummary.goods_receipt_id)
+      .then((receipt) => {
+        if (!cancelled) loadReceiptIntoForm(receipt);
+      })
+      .catch(() => {
+        if (!cancelled) setActiveReceipt(null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingReceipt(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pendingReceiptSummary?.goods_receipt_id]);
+
+  const submitStartReceipt = async () => {
+    setReceiptError(null);
+    setIsStartingReceipt(true);
+    try {
+      const receipt = await purchaseApi.startGoodsReceipt(
+        order.purchase_order_id,
+      );
+      loadReceiptIntoForm(receipt);
+    } catch (err) {
+      setReceiptError(
+        err instanceof Error ? err.message : "Error al iniciar la recepción",
+      );
+    } finally {
+      setIsStartingReceipt(false);
+    }
+  };
+
+  const submitSaveReceiptItems = async () => {
+    if (!activeReceipt) return;
+    const items = activeReceipt.items.map((item) => ({
+      product_variant_id: item.product_variant_id,
+      quantity_received: Number(
+        receiptItemEdits[item.product_variant_id] ?? 0,
+      ),
+    }));
+
+    if (items.some((i) => !Number.isFinite(i.quantity_received) || i.quantity_received < 0)) {
+      setReceiptError("Cantidad recibida invalida");
+      return;
+    }
+
+    setReceiptError(null);
+    setIsSavingReceiptItems(true);
+    try {
+      const receipt = await purchaseApi.updateGoodsReceiptItems(
+        activeReceipt.goods_receipt_id,
+        { items },
+      );
+      loadReceiptIntoForm(receipt);
+    } catch (err) {
+      setReceiptError(
+        err instanceof Error
+          ? err.message
+          : "Error al corregir los items recibidos",
+      );
+    } finally {
+      setIsSavingReceiptItems(false);
+    }
+  };
+
+  const submitConfirmReceipt = async () => {
+    if (!activeReceipt) return;
+    setReceiptError(null);
+    setIsConfirmingReceipt(true);
+    try {
+      const updatedOrder = await purchaseApi.confirmGoodsReceipt(
+        activeReceipt.goods_receipt_id,
+      );
+      setActiveReceipt(null);
+      onOrderUpdated?.(updatedOrder);
+    } catch (err) {
+      setReceiptError(
+        err instanceof Error
+          ? err.message
+          : "Error al confirmar la recepción",
+      );
+    } finally {
+      setIsConfirmingReceipt(false);
+    }
+  };
 
   const openInvoiceEdit = (invoiceId: string) => {
     setInvoiceEditError(null);
@@ -1180,21 +1317,121 @@ export function PurchaseOrderDetailPanel({
           </div>
 
           <div className="grid gap-6 xl:grid-cols-2">
-            <Section title="Recepciones">
+            <Section
+              title="Recepción de mercancía"
+              action={
+                isShippedForReceiving && !activeReceipt && !isLoadingReceipt ? (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    loading={isStartingReceipt}
+                    onClick={submitStartReceipt}
+                  >
+                    Iniciar recepción
+                  </Button>
+                ) : null
+              }
+            >
+              {isLoadingReceipt && (
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-sm text-gray-500">
+                  Cargando recepción en curso...
+                </div>
+              )}
+
+              {activeReceipt && (
+                <div className="mb-3 space-y-3 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-blue-900">
+                        Recepción en curso — corrige lo que realmente llegó
+                      </p>
+                      <p className="text-xs text-blue-700">
+                        Precargado desde la orden. Ajusta cantidad si el
+                        proveedor envió mercancía incompleta o distinta.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {activeReceipt.items.map((item) => (
+                      <div
+                        key={item.product_variant_id}
+                        className="grid grid-cols-1 gap-2 sm:grid-cols-[1.5fr_1fr_1fr] sm:items-center"
+                      >
+                        <p className="text-xs text-gray-700">
+                          {item.variant_name ?? item.product_variant_id}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Pedido: {item.quantity_ordered ?? "—"}
+                        </p>
+                        <Input
+                          label="Cantidad recibida"
+                          type="number"
+                          min="0"
+                          value={
+                            receiptItemEdits[item.product_variant_id] ?? ""
+                          }
+                          onChange={(e) =>
+                            setReceiptItemEdits((prev) => ({
+                              ...prev,
+                              [item.product_variant_id]: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {receiptError && (
+                    <p className="text-xs text-red-600 font-medium">
+                      {receiptError}
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap justify-end gap-2 border-t border-blue-200 pt-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={submitSaveReceiptItems}
+                      loading={isSavingReceiptItems}
+                    >
+                      Guardar corrección
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      onClick={submitConfirmReceipt}
+                      loading={isConfirmingReceipt}
+                    >
+                      Confirmar recepción
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <StackList
-                items={order.goods_receipts.map((receipt) => ({
-                  id: receipt.goods_receipt_id,
-                  title: formatDateTime(receipt.received_date),
-                  meta: `${receipt.items_received} item(s) recibidos`,
-                  amount: (
-                    <DualCurrencyAmount
-                      amountUsd={Number(receipt.total_amount)}
-                      rate={displayRate}
-                      align="right"
-                    />
-                  ),
-                }))}
-                emptyMessage="La orden todavía no ha generado recepción de mercadería."
+                items={order.goods_receipts
+                  .filter((receipt) => receipt.status !== "PENDING")
+                  .map((receipt) => ({
+                    id: receipt.goods_receipt_id,
+                    title: formatDateTime(receipt.received_date),
+                    meta: `${receipt.items_received} item(s) recibidos`,
+                    amount: (
+                      <DualCurrencyAmount
+                        amountUsd={Number(receipt.total_amount)}
+                        rate={displayRate}
+                        align="right"
+                      />
+                    ),
+                  }))}
+                emptyMessage={
+                  isShippedForReceiving
+                    ? "Todavía no se ha confirmado ninguna recepción."
+                    : "La orden todavía no ha generado recepción de mercadería."
+                }
               />
             </Section>
 

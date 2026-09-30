@@ -8,12 +8,14 @@ import type {
   CreatePurchasePaymentRequest,
   CreateSupplierRequest,
   ResolvePurchaseDisputeRequest,
+  UpdateGoodsReceiptRequest,
   UpdateSupplierInvoiceRequest,
   UpdateSupplierRequest,
   UpsertPaymentAlertConfigRequest,
 } from "@/interfaces/api/requests/PurchaseModuleRequests.interface";
 import type {
   ExchangeRateResult,
+  GoodsReceiptDetail,
   PaymentAlert,
   PaymentAlertConfigResponse,
   PaymentAlertStats,
@@ -231,6 +233,53 @@ export const purchaseApi = {
     });
 
     return json<PurchaseOrderDetail>(res, "Error al aplicar el crédito del proveedor");
+  },
+
+  async startGoodsReceipt(orderId: string): Promise<GoodsReceiptDetail> {
+    const res = await fetch(`${url}/purchase/${orderId}/goods-receipt`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+
+    return json<GoodsReceiptDetail>(res, "Error al iniciar la recepción de mercancía");
+  },
+
+  async getGoodsReceipt(goodsReceiptId: string): Promise<GoodsReceiptDetail> {
+    const res = await fetch(`${url}/purchase/goods-receipt/${goodsReceiptId}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+
+    return json<GoodsReceiptDetail>(res, "Error al obtener la recepción de mercancía");
+  },
+
+  async updateGoodsReceiptItems(
+    goodsReceiptId: string,
+    data: UpdateGoodsReceiptRequest,
+  ): Promise<GoodsReceiptDetail> {
+    const res = await fetch(`${url}/purchase/goods-receipt/${goodsReceiptId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    return json<GoodsReceiptDetail>(res, "Error al corregir los items recibidos");
+  },
+
+  async confirmGoodsReceipt(goodsReceiptId: string): Promise<PurchaseOrderDetail> {
+    const res = await fetch(
+      `${url}/purchase/goods-receipt/${goodsReceiptId}/confirm`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      },
+    );
+
+    return json<PurchaseOrderDetail>(res, "Error al confirmar la recepción de mercancía");
   },
 
   async getMatching(orderId: string): Promise<PurchaseMatching> {

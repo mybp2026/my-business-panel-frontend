@@ -866,6 +866,7 @@ function PurchasesPageContent({
             paymentMethods={canManage ? catalogs.payment_methods : undefined}
             onRegisterPayment={canManage ? handleRegisterPayment : undefined}
             onUpdatePayment={canManage ? handleUpdatePayment : undefined}
+            onOrderUpdated={setSelectedOrder}
           />
         )}
       </Modal>
