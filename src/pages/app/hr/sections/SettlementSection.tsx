@@ -86,7 +86,10 @@ export function SettlementSection() {
         : "—";
   };
 
+  const isStaging = import.meta.env.MODE !== "production";
+
   const [terminationDate, setTerminationDate] = useState(todayIso());
+  const [simulationDate, setSimulationDate] = useState("");
   const [terminationType, setTerminationType] =
     useState<HrTerminationType>("renuncia");
   const [terminationReason, setTerminationReason] = useState("");
@@ -154,7 +157,11 @@ export function SettlementSection() {
     setIsLoading(true);
     setSettlement(null);
     try {
-      const result = await hrSettlementApi.preview(employeeId, terminationDate);
+      const result = await hrSettlementApi.preview(
+        employeeId,
+        terminationDate,
+        isStaging && simulationDate ? simulationDate : undefined,
+      );
       setPreview(result);
     } catch (error) {
       setToast({
@@ -352,6 +359,20 @@ export function SettlementSection() {
             onChange={(e) => setTerminationReason(e.target.value)}
           />
         </div>
+        {isStaging && (
+          <div className="mt-4 rounded-xl border border-dashed border-amber-300 bg-amber-50 p-4">
+            <p className="mb-2 text-xs font-medium text-amber-700">
+              Solo staging: simula "hoy" para probar mora proyectada (Art.
+              142.f) sin esperar el tiempo real. No afecta la fecha de egreso.
+            </p>
+            <Input
+              label="Simular fecha de hoy"
+              type="date"
+              value={simulationDate}
+              onChange={(e) => setSimulationDate(e.target.value)}
+            />
+          </div>
+        )}
         {INDEMNIFIES.includes(terminationType) && (
           <p className="mt-3 text-sm text-gray-600">
             Con esta causal la indemnización del Art. 92 iguala el monto de las
