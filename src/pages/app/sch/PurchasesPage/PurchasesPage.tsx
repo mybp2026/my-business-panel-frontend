@@ -237,6 +237,27 @@ function PurchasesPageContent({
     );
   };
 
+  /**
+   * Handler pasado como `onOrderUpdated` al panel de detalle: el panel lo
+   * llama tras cualquier cambio server-side (marcar enviada, confirmar o
+   * cancelar recepcion). Antes solo se llamaba `setSelectedOrder`, que
+   * refresca el modal pero deja la fila de la tabla (y el three-way
+   * matching) desactualizados hasta recargar la pagina.
+   */
+  const handleOrderUpdated = async (updated: PurchaseOrderDetail) => {
+    setSelectedOrder(updated);
+    updateOrderRow(updated);
+    try {
+      const matching = await purchaseApi.getMatching(
+        updated.purchase_order_id,
+      );
+      setSelectedMatching(matching);
+    } catch {
+      // El matching no es critico para reflejar el cambio; se mantiene el
+      // ultimo valor conocido si la recarga falla.
+    }
+  };
+
   const openDetail = async (orderId: string) => {
     setIsDetailOpen(true);
     setIsDetailLoading(true);
@@ -916,7 +937,7 @@ function PurchasesPageContent({
             paymentMethods={canManage ? catalogs.payment_methods : undefined}
             onRegisterPayment={canManage ? handleRegisterPayment : undefined}
             onUpdatePayment={canManage ? handleUpdatePayment : undefined}
-            onOrderUpdated={setSelectedOrder}
+            onOrderUpdated={handleOrderUpdated}
           />
         )}
       </Modal>

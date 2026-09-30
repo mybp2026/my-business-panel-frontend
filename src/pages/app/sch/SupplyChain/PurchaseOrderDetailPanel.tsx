@@ -116,17 +116,17 @@ export function PurchaseOrderDetailPanel({
     useState(false);
   const [editPaymentError, setEditPaymentError] = useState<string | null>(null);
 
-  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(
-    null,
-  );
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [invoiceEditItems, setInvoiceEditItems] = useState<
-    Array<{ product_variant_id: string; label: string; quantity_billed: string; unit_price: string }>
+    Array<{
+      product_variant_id: string;
+      label: string;
+      quantity_billed: string;
+      unit_price: string;
+    }>
   >([]);
-  const [isInvoiceEditSubmitting, setIsInvoiceEditSubmitting] =
-    useState(false);
-  const [invoiceEditError, setInvoiceEditError] = useState<string | null>(
-    null,
-  );
+  const [isInvoiceEditSubmitting, setIsInvoiceEditSubmitting] = useState(false);
+  const [invoiceEditError, setInvoiceEditError] = useState<string | null>(null);
 
   const [supplierCredits, setSupplierCredits] = useState<SupplierCredit[]>([]);
   const [applyingCreditId, setApplyingCreditId] = useState<string | null>(null);
@@ -205,9 +205,7 @@ export function PurchaseOrderDetailPanel({
   }, [order.purchase_order_id]);
 
   const [isMarkingShipped, setIsMarkingShipped] = useState(false);
-  const [markShippedError, setMarkShippedError] = useState<string | null>(
-    null,
-  );
+  const [markShippedError, setMarkShippedError] = useState<string | null>(null);
 
   const isPendingOrder =
     order.purchase_order_status_id === PENDING_ORDER_STATUS_ID;
@@ -330,9 +328,7 @@ export function PurchaseOrderDetailPanel({
       onOrderUpdated?.(updatedOrder);
     } catch (err) {
       setReceiptError(
-        err instanceof Error
-          ? err.message
-          : "Error al cancelar la recepción",
+        err instanceof Error ? err.message : "Error al cancelar la recepción",
       );
     } finally {
       setIsCancelingReceipt(false);
@@ -346,12 +342,14 @@ export function PurchaseOrderDetailPanel({
     if (!activeReceipt) return;
     const items = activeReceipt.items.map((item) => ({
       product_variant_id: item.product_variant_id,
-      quantity_received: Number(
-        receiptItemEdits[item.product_variant_id] ?? 0,
-      ),
+      quantity_received: Number(receiptItemEdits[item.product_variant_id] ?? 0),
     }));
 
-    if (items.some((i) => !Number.isFinite(i.quantity_received) || i.quantity_received < 0)) {
+    if (
+      items.some(
+        (i) => !Number.isFinite(i.quantity_received) || i.quantity_received < 0,
+      )
+    ) {
       setReceiptError("Cantidad recibida invalida");
       return;
     }
@@ -367,9 +365,12 @@ export function PurchaseOrderDetailPanel({
     });
 
     try {
-      await purchaseApi.updateGoodsReceiptItems(activeReceipt.goods_receipt_id, {
-        items,
-      });
+      await purchaseApi.updateGoodsReceiptItems(
+        activeReceipt.goods_receipt_id,
+        {
+          items,
+        },
+      );
       const updatedOrder = await purchaseApi.confirmGoodsReceipt(
         activeReceipt.goods_receipt_id,
       );
@@ -378,9 +379,7 @@ export function PurchaseOrderDetailPanel({
     } catch (err) {
       onOrderUpdated?.(previousOrder);
       setReceiptError(
-        err instanceof Error
-          ? err.message
-          : "Error al confirmar la recepción",
+        err instanceof Error ? err.message : "Error al confirmar la recepción",
       );
     } finally {
       setIsConfirmingReceipt(false);
@@ -447,7 +446,9 @@ export function PurchaseOrderDetailPanel({
       setDisputeForm({ dispute_type: "MISSING_GOODS", description: "" });
     } catch (err) {
       setDisputeError(
-        err instanceof Error ? err.message : "Error al reportar la discrepancia",
+        err instanceof Error
+          ? err.message
+          : "Error al reportar la discrepancia",
       );
     } finally {
       setIsDisputeSubmitting(false);
@@ -681,9 +682,6 @@ export function PurchaseOrderDetailPanel({
                 <h3 className="text-xl font-semibold text-gray-900">
                   {order.supplier_name}
                 </h3>
-                <p className="text-sm text-gray-600">
-                  {order.purchase_order_id}
-                </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Badge
@@ -978,7 +976,8 @@ export function PurchaseOrderDetailPanel({
                             {invoice.paid ? "Pagada" : "Pendiente"}
                           </Badge>
                           {isInvoiceEditable &&
-                            editingInvoiceId !== invoice.supplier_invoice_id && (
+                            editingInvoiceId !==
+                              invoice.supplier_invoice_id && (
                               <Button
                                 type="button"
                                 variant="ghost"
@@ -1012,7 +1011,10 @@ export function PurchaseOrderDetailPanel({
                                   setInvoiceEditItems((prev) =>
                                     prev.map((it, i) =>
                                       i === index
-                                        ? { ...it, quantity_billed: e.target.value }
+                                        ? {
+                                            ...it,
+                                            quantity_billed: e.target.value,
+                                          }
                                         : it,
                                     ),
                                   )
@@ -1100,7 +1102,8 @@ export function PurchaseOrderDetailPanel({
                         </span>{" "}
                         {displayRate && (
                           <span className="font-mono text-amber-600">
-                            (≈ {formatBs(usdToBs(balanceDue, displayRate) ?? 0)})
+                            (≈ {formatBs(usdToBs(balanceDue, displayRate) ?? 0)}
+                            )
                           </span>
                         )}
                       </p>
@@ -1544,70 +1547,71 @@ export function PurchaseOrderDetailPanel({
                     </div>
                   </div>
 
-                  {matching.amount_comparison && matching.quantity_comparison && (
-                    <div className="mt-4 overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className={headerCell}>Origen</th>
-                            <th className={headerCell}>Cantidad</th>
-                            <th className={headerCell}>Subtotal</th>
-                            <th className={headerCell}>Impuesto</th>
-                            <th className={headerCell}>Total</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <MatchingRow
-                            label="Orden"
-                            qty={matching.quantity_comparison.order_qty}
-                            amounts={matching.amount_comparison.order}
-                          />
-                          <MatchingRow
-                            label="Factura"
-                            qty={matching.quantity_comparison.invoice_qty}
-                            amounts={matching.amount_comparison.invoice}
-                          />
-                          <MatchingRow
-                            label="Recepción"
-                            qty={matching.quantity_comparison.receipt_qty}
-                            amounts={matching.amount_comparison.receipt}
-                          />
-                        </tbody>
-                      </table>
+                  {matching.amount_comparison &&
+                    matching.quantity_comparison && (
+                      <div className="mt-4 overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-gray-200">
+                              <th className={headerCell}>Origen</th>
+                              <th className={headerCell}>Cantidad</th>
+                              <th className={headerCell}>Subtotal</th>
+                              <th className={headerCell}>Impuesto</th>
+                              <th className={headerCell}>Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <MatchingRow
+                              label="Orden"
+                              qty={matching.quantity_comparison.order_qty}
+                              amounts={matching.amount_comparison.order}
+                            />
+                            <MatchingRow
+                              label="Factura"
+                              qty={matching.quantity_comparison.invoice_qty}
+                              amounts={matching.amount_comparison.invoice}
+                            />
+                            <MatchingRow
+                              label="Recepción"
+                              qty={matching.quantity_comparison.receipt_qty}
+                              amounts={matching.amount_comparison.receipt}
+                            />
+                          </tbody>
+                        </table>
 
-                      {!matching.is_matched && (
-                        <div className="mt-3 grid gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 sm:grid-cols-3">
-                          <p>
-                            Dif. orden vs factura:{" "}
-                            <span className="font-mono font-semibold">
-                              {formatCurrency(
-                                matching.amount_comparison.differences
-                                  .order_vs_invoice_total,
-                              )}
-                            </span>
-                          </p>
-                          <p>
-                            Dif. orden vs recepción:{" "}
-                            <span className="font-mono font-semibold">
-                              {formatCurrency(
-                                matching.amount_comparison.differences
-                                  .order_vs_receipt_total,
-                              )}
-                            </span>
-                          </p>
-                          <p>
-                            Dif. factura vs recepción:{" "}
-                            <span className="font-mono font-semibold">
-                              {formatCurrency(
-                                matching.amount_comparison.differences
-                                  .invoice_vs_receipt_total,
-                              )}
-                            </span>
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                        {!matching.is_matched && (
+                          <div className="mt-3 grid gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 sm:grid-cols-3">
+                            <p>
+                              Dif. orden vs factura:{" "}
+                              <span className="font-mono font-semibold">
+                                {formatCurrency(
+                                  matching.amount_comparison.differences
+                                    .order_vs_invoice_total,
+                                )}
+                              </span>
+                            </p>
+                            <p>
+                              Dif. orden vs recepción:{" "}
+                              <span className="font-mono font-semibold">
+                                {formatCurrency(
+                                  matching.amount_comparison.differences
+                                    .order_vs_receipt_total,
+                                )}
+                              </span>
+                            </p>
+                            <p>
+                              Dif. factura vs recepción:{" "}
+                              <span className="font-mono font-semibold">
+                                {formatCurrency(
+                                  matching.amount_comparison.differences
+                                    .invoice_vs_receipt_total,
+                                )}
+                              </span>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-sm text-gray-500">
@@ -1689,7 +1693,10 @@ export function PurchaseOrderDetailPanel({
                   }
                   options={[
                     { value: "MISSING_GOODS", label: "Mercancía incompleta" },
-                    { value: "PRICE_MISMATCH", label: "Precio distinto al pactado" },
+                    {
+                      value: "PRICE_MISMATCH",
+                      label: "Precio distinto al pactado",
+                    },
                   ]}
                 />
                 <Input
