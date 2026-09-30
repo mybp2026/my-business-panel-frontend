@@ -91,13 +91,43 @@ export interface ExchangeRateResult {
   updated_at: string;
 }
 
+export type GoodsReceiptStatus = "PENDING" | "CONFIRMED";
+
 export interface GoodsReceiptSummary {
   goods_receipt_id: string;
   received_date: string;
+  status: GoodsReceiptStatus;
+  confirmed_at?: string | null;
   subtotal_amount: NumericLike;
   tax_amount: NumericLike;
   total_amount: NumericLike;
   items_received: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface GoodsReceiptItem {
+  goods_receipt_item_id: string;
+  product_variant_id: string;
+  sku?: string;
+  variant_name?: string;
+  quantity_received: number;
+  /** Cantidad originalmente pedida en la orden, para comparar contra lo recibido. */
+  quantity_ordered?: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface GoodsReceiptDetail {
+  goods_receipt_id: string;
+  purchase_order_id: string;
+  received_date: string;
+  status: GoodsReceiptStatus;
+  confirmed_at?: string | null;
+  subtotal_amount: NumericLike;
+  tax_amount: NumericLike;
+  total_amount: NumericLike;
+  items: GoodsReceiptItem[];
   created_at?: string;
   updated_at?: string;
 }

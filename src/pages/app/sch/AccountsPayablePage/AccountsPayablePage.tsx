@@ -865,6 +865,7 @@ function AccountsPayablePageContent({
             paymentMethods={catalogs.payment_methods}
             onRegisterPayment={handleRegisterPaymentPanel}
             onUpdatePayment={handleUpdatePaymentPanel}
+            onOrderUpdated={setSelectedOrder}
           />
         )}
       </Modal>

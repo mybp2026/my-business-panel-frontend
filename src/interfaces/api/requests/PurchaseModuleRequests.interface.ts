@@ -68,3 +68,12 @@ export interface ResolvePurchaseDisputeRequest {
 export interface ApplySupplierCreditRequest {
   purchase_account_payable_id: string;
 }
+
+export interface UpdateGoodsReceiptItemRequest {
+  product_variant_id: string;
+  quantity_received: number;
+}
+
+export interface UpdateGoodsReceiptRequest {
+  items: UpdateGoodsReceiptItemRequest[];
+}
