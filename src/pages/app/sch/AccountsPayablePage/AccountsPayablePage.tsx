@@ -44,6 +44,8 @@ import {
   formatPaymentMethodName,
   getOrderStatusTone,
   getPayableStatusTone,
+  translateOrderStatus,
+  translatePayableStatus,
 } from "@/utils/purchase";
 
 const BASE_CURRENCY_ID = 2; // USD — moneda base de Compras/CxP; VES es conversion secundaria
@@ -271,6 +273,28 @@ function AccountsPayablePageContent({
     setPaymentError(null);
     setIsSubmittingPayment(true);
 
+    // Optimista: refleja el abono de inmediato en la fila de la tabla, se
+    // corrige (o revierte) con la respuesta real del servidor.
+    const previousPayable = selectedPayable;
+    const optimisticAmountPaid = Number(previousPayable.amount_paid ?? 0) + amount;
+    const optimisticBalance = Math.max(
+      Number(previousPayable.total_amount ?? 0) - optimisticAmountPaid,
+      0,
+    );
+    setPayables((prev) =>
+      prev.map((item) =>
+        item.purchase_account_payable_id ===
+        previousPayable.purchase_account_payable_id
+          ? {
+              ...item,
+              amount_paid: optimisticAmountPaid,
+              balance_due: optimisticBalance,
+              is_paid: optimisticBalance <= 0,
+            }
+          : item,
+      ),
+    );
+
     try {
       const payload: CreatePurchasePaymentRequest = {
         purchase_account_payable_id:
@@ -311,6 +335,14 @@ function AccountsPayablePageContent({
 
       closePaymentModal();
     } catch (error) {
+      setPayables((prev) =>
+        prev.map((item) =>
+          item.purchase_account_payable_id ===
+          previousPayable.purchase_account_payable_id
+            ? previousPayable
+            : item,
+        ),
+      );
       setToast({
         mode: "error",
         message:
@@ -326,57 +358,154 @@ function AccountsPayablePageContent({
   const handleRegisterPaymentPanel = async (
     payload: CreatePurchasePaymentRequest,
   ) => {
-    const response = await purchaseApi.registerPayment(payload);
-
-    setPayables((prev) =>
-      prev.map((item) =>
-        item.purchase_account_payable_id === payload.purchase_account_payable_id
-          ? {
-              ...item,
-              ...response.purchase_account_payable,
-            }
-          : item,
-      ),
+    const previousPayable = payables.find(
+      (item) =>
+        item.purchase_account_payable_id ===
+        payload.purchase_account_payable_id,
     );
 
-    if (selectedOrder?.purchase_order_id === response.order.purchase_order_id) {
-      setSelectedOrder(response.order);
-      const matching = await purchaseApi
-        .getMatching(response.order.purchase_order_id)
-        .catch(() => null);
-      if (matching) setSelectedMatching(matching);
+    if (previousPayable) {
+      const optimisticAmountPaid =
+        Number(previousPayable.amount_paid ?? 0) + payload.amount_paid;
+      const optimisticBalance = Math.max(
+        Number(previousPayable.total_amount ?? 0) - optimisticAmountPaid,
+        0,
+      );
+      setPayables((prev) =>
+        prev.map((item) =>
+          item.purchase_account_payable_id ===
+          payload.purchase_account_payable_id
+            ? {
+                ...item,
+                amount_paid: optimisticAmountPaid,
+                balance_due: optimisticBalance,
+                is_paid: optimisticBalance <= 0,
+              }
+            : item,
+        ),
+      );
     }
 
-    setToast({ mode: "success", message: "Abono registrado correctamente" });
+    try {
+      const response = await purchaseApi.registerPayment(payload);
+
+      setPayables((prev) =>
+        prev.map((item) =>
+          item.purchase_account_payable_id ===
+          payload.purchase_account_payable_id
+            ? {
+                ...item,
+                ...response.purchase_account_payable,
+              }
+            : item,
+        ),
+      );
+
+      if (
+        selectedOrder?.purchase_order_id === response.order.purchase_order_id
+      ) {
+        setSelectedOrder(response.order);
+        const matching = await purchaseApi
+          .getMatching(response.order.purchase_order_id)
+          .catch(() => null);
+        if (matching) setSelectedMatching(matching);
+      }
+
+      setToast({ mode: "success", message: "Abono registrado correctamente" });
+    } catch (error) {
+      if (previousPayable) {
+        setPayables((prev) =>
+          prev.map((item) =>
+            item.purchase_account_payable_id ===
+            previousPayable.purchase_account_payable_id
+              ? previousPayable
+              : item,
+          ),
+        );
+      }
+      throw error;
+    }
   };
 
   const handleUpdatePaymentPanel = async (
     paymentId: string,
     payload: Partial<CreatePurchasePaymentRequest>,
   ) => {
-    const response = await purchaseApi.updatePayment(paymentId, payload);
-
-    setPayables((prev) =>
-      prev.map((item) =>
-        item.purchase_account_payable_id ===
-        response.purchase_account_payable.purchase_account_payable_id
-          ? {
-              ...item,
-              ...response.purchase_account_payable,
-            }
-          : item,
-      ),
+    const previousOrder = selectedOrder;
+    const previousPayment = previousOrder?.payments.find(
+      (payment) => payment.purchase_order_payment_id === paymentId,
     );
+    const previousPayable = previousOrder
+      ? payables.find(
+          (item) =>
+            item.purchase_account_payable_id ===
+            previousOrder.purchase_account_payable_id,
+        )
+      : undefined;
 
-    if (selectedOrder?.purchase_order_id === response.order.purchase_order_id) {
-      setSelectedOrder(response.order);
-      const matching = await purchaseApi
-        .getMatching(response.order.purchase_order_id)
-        .catch(() => null);
-      if (matching) setSelectedMatching(matching);
+    if (previousPayable && previousPayment && payload.amount_paid !== undefined) {
+      const delta =
+        Number(payload.amount_paid) - Number(previousPayment.amount_paid);
+      const optimisticAmountPaid =
+        Number(previousPayable.amount_paid ?? 0) + delta;
+      const optimisticBalance = Math.max(
+        Number(previousPayable.total_amount ?? 0) - optimisticAmountPaid,
+        0,
+      );
+      setPayables((prev) =>
+        prev.map((item) =>
+          item.purchase_account_payable_id ===
+          previousPayable.purchase_account_payable_id
+            ? {
+                ...item,
+                amount_paid: optimisticAmountPaid,
+                balance_due: optimisticBalance,
+                is_paid: optimisticBalance <= 0,
+              }
+            : item,
+        ),
+      );
     }
 
-    setToast({ mode: "success", message: "Abono actualizado correctamente" });
+    try {
+      const response = await purchaseApi.updatePayment(paymentId, payload);
+
+      setPayables((prev) =>
+        prev.map((item) =>
+          item.purchase_account_payable_id ===
+          response.purchase_account_payable.purchase_account_payable_id
+            ? {
+                ...item,
+                ...response.purchase_account_payable,
+              }
+            : item,
+        ),
+      );
+
+      if (
+        selectedOrder?.purchase_order_id === response.order.purchase_order_id
+      ) {
+        setSelectedOrder(response.order);
+        const matching = await purchaseApi
+          .getMatching(response.order.purchase_order_id)
+          .catch(() => null);
+        if (matching) setSelectedMatching(matching);
+      }
+
+      setToast({ mode: "success", message: "Abono actualizado correctamente" });
+    } catch (error) {
+      if (previousPayable) {
+        setPayables((prev) =>
+          prev.map((item) =>
+            item.purchase_account_payable_id ===
+            previousPayable.purchase_account_payable_id
+              ? previousPayable
+              : item,
+          ),
+        );
+      }
+      throw error;
+    }
   };
 
   const selectedCurrency = catalogs.currencies?.find(
@@ -516,7 +645,7 @@ function AccountsPayablePageContent({
             width: "12%",
             render: (value) => (
               <Badge variant={getPayableStatusTone(String(value))}>
-                {String(value)}
+                {translatePayableStatus(String(value))}
               </Badge>
             ),
           },
@@ -526,7 +655,7 @@ function AccountsPayablePageContent({
             width: "12%",
             render: (value) => (
               <Badge variant={getOrderStatusTone(String(value))}>
-                {String(value)}
+                {translateOrderStatus(String(value))}
               </Badge>
             ),
           },

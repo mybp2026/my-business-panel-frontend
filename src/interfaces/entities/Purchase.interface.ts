@@ -171,6 +171,34 @@ export interface PurchaseOrderDetail extends PurchaseOrder {
   goods_receipts: GoodsReceiptSummary[];
 }
 
+export interface MatchingAmountBreakdown {
+  subtotal: NumericLike | null;
+  tax: NumericLike | null;
+  total: NumericLike | null;
+}
+
+export interface MatchingAmountComparison {
+  order: MatchingAmountBreakdown;
+  invoice: MatchingAmountBreakdown;
+  receipt: MatchingAmountBreakdown;
+  differences: {
+    order_vs_invoice_total: NumericLike;
+    order_vs_receipt_total: NumericLike;
+    invoice_vs_receipt_total: NumericLike;
+  };
+}
+
+export interface MatchingQuantityComparison {
+  order_qty: NumericLike;
+  invoice_qty: NumericLike;
+  receipt_qty: NumericLike;
+  differences: {
+    order_vs_invoice: NumericLike;
+    order_vs_receipt: NumericLike;
+    invoice_vs_receipt: NumericLike;
+  };
+}
+
 export interface PurchaseMatching {
   purchase_order_id: string;
   matching_found: boolean;
@@ -181,8 +209,8 @@ export interface PurchaseMatching {
   quantities_matched?: boolean;
   is_matched?: boolean;
   matched_at?: string;
-  amount_comparison?: Record<string, unknown>;
-  quantity_comparison?: Record<string, unknown>;
+  amount_comparison?: MatchingAmountComparison;
+  quantity_comparison?: MatchingQuantityComparison;
   message?: string;
 }
 

@@ -27,6 +27,12 @@ interface ProductVariantComboBoxProps {
   hint?: string;
   placeholder?: string;
   hideOutOfStock?: boolean;
+  /**
+   * "price" (default) muestra/usa el precio de venta -- lo correcto para POS.
+   * "cost_price" muestra/usa el costo (lo que se le paga al proveedor) --
+   * usar en Compras, donde el precio de venta es irrelevante para la orden.
+   */
+  priceField?: "price" | "cost_price";
 }
 
 type ProductVariantRow = Product & {
@@ -43,8 +49,13 @@ const getVariantId = (p: ProductVariantRow): string | undefined =>
 const getVariantName = (p: ProductVariantRow): string =>
   p.variant_name ?? p.product_name ?? "—";
 
-const getVariantPrice = (p: ProductVariantRow): number =>
-  Number(p.unit_price ?? p.price ?? 0);
+const getVariantPrice = (
+  p: ProductVariantRow,
+  priceField: "price" | "cost_price" = "price",
+): number =>
+  priceField === "cost_price"
+    ? Number(p.cost_price ?? 0)
+    : Number(p.unit_price ?? p.price ?? 0);
 
 const formatCurrency = (value: number): string =>
   value.toLocaleString("es-CR", { minimumFractionDigits: 2 });
@@ -64,6 +75,7 @@ export function ProductVariantComboBox({
   hint,
   placeholder = "Buscar producto por SKU o nombre...",
   hideOutOfStock = false,
+  priceField = "price",
 }: ProductVariantComboBoxProps) {
   // State
   const [isOpen, setIsOpen] = useState(false);
@@ -136,14 +148,14 @@ export function ProductVariantComboBox({
         product_variant_id: id,
         variant_name: name,
         sku: variant.sku,
-        unit_price: getVariantPrice(variant),
+        unit_price: getVariantPrice(variant, priceField),
       });
 
       setSelectedLabel(label);
       setIsOpen(false);
       setSearchTerm("");
     },
-    [onChange, getStockForVariant],
+    [onChange, getStockForVariant, priceField],
   );
 
   const handleManualSkuLookup = useCallback(
@@ -347,10 +359,17 @@ export function ProductVariantComboBox({
                         </span>
                       </div>
                       <div className="mt-0.5 text-[11px] text-gray-500">
-                        Precio (USD):{" "}
+                        {priceField === "cost_price" ? "Costo" : "Precio"}{" "}
+                        (USD):{" "}
                         <span className="font-mono">
-                          ${formatCurrency(getVariantPrice(variant))}
+                          ${formatCurrency(getVariantPrice(variant, priceField))}
                         </span>
+                        {priceField === "cost_price" &&
+                          getVariantPrice(variant, priceField) === 0 && (
+                            <span className="ml-1 font-medium text-amber-600">
+                              — sin costo configurado
+                            </span>
+                          )}
                       </div>
                     </button>
                   </li>

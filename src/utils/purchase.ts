@@ -74,6 +74,26 @@ export const formatPaymentMethodName = (value?: string | null) =>
         .join(" ")
     : "—";
 
+const orderStatusLabels: Record<string, string> = {
+  pending: "Pendiente",
+  shipped: "Enviada",
+  delivered: "Entregada",
+  cancelled: "Cancelada",
+};
+
+export const translateOrderStatus = (status?: string | null): string =>
+  orderStatusLabels[(status ?? "").toLowerCase()] ?? status ?? "—";
+
+const payableStatusLabels: Record<string, string> = {
+  pending: "Pendiente",
+  "partial paid": "Pago parcial",
+  paid: "Pagada",
+  overdue: "Vencida",
+};
+
+export const translatePayableStatus = (status?: string | null): string =>
+  payableStatusLabels[(status ?? "").toLowerCase()] ?? status ?? "—";
+
 export const getOrderStatusTone = (status?: string | null): BadgeTone => {
   switch ((status ?? "").toLowerCase()) {
     case "pending":
