@@ -39,6 +39,10 @@ const VES_CURRENCY_ID = 1;
 // Estado de orden que habilita edicion de factura ("enviada" / Shipped).
 const INVOICE_EDITABLE_ORDER_STATUS_ID = 2;
 
+// Estado inicial de la orden, antes de marcarla como enviada.
+const PENDING_ORDER_STATUS_ID = 1;
+const SHIPPED_ORDER_STATUS_ID = 2;
+
 const disputeTypeLabels: Record<string, string> = {
   MISSING_GOODS: "Mercancía incompleta",
   PRICE_MISMATCH: "Precio distinto al pactado",
@@ -194,6 +198,34 @@ export function PurchaseOrderDetailPanel({
       cancelled = true;
     };
   }, [order.purchase_order_id]);
+
+  const [isMarkingShipped, setIsMarkingShipped] = useState(false);
+  const [markShippedError, setMarkShippedError] = useState<string | null>(
+    null,
+  );
+
+  const isPendingOrder =
+    order.purchase_order_status_id === PENDING_ORDER_STATUS_ID;
+
+  const submitMarkAsShipped = async () => {
+    setMarkShippedError(null);
+    setIsMarkingShipped(true);
+    try {
+      const updatedOrder = await purchaseApi.updateOrderStatus(
+        order.purchase_order_id,
+        SHIPPED_ORDER_STATUS_ID,
+      );
+      onOrderUpdated?.(updatedOrder);
+    } catch (err) {
+      setMarkShippedError(
+        err instanceof Error
+          ? err.message
+          : "Error al marcar la orden como enviada",
+      );
+    } finally {
+      setIsMarkingShipped(false);
+    }
+  };
 
   const isInvoiceEditable =
     order.purchase_order_status_id === INVOICE_EDITABLE_ORDER_STATUS_ID;
@@ -639,8 +671,25 @@ export function PurchaseOrderDetailPanel({
                     {order.account_payable_status_name}
                   </Badge>
                 )}
+                {isPendingOrder && (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    loading={isMarkingShipped}
+                    onClick={submitMarkAsShipped}
+                  >
+                    Marcar como enviada
+                  </Button>
+                )}
               </div>
             </div>
+
+            {markShippedError && (
+              <p className="mt-2 text-xs text-red-600 font-medium">
+                {markShippedError}
+              </p>
+            )}
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <SummaryField
