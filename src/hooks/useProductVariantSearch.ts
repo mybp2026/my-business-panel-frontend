@@ -73,7 +73,16 @@ export function useProductVariantSearch({
   };
 
   const fetchInventoryVariants = async (term: string) => {
-    const inventory = await warehouseApi.listInventory(warehouseId!, term);
+    // include_catalog=true: sin esto, un producto sin fila de inventario
+    // todavia en esta bodega (nunca paso por un goods-receipt) queda
+    // invisible para siempre en el combo de venta -- el INNER JOIN
+    // original del backend lo excluia aunque existiera en el catalogo.
+    const inventory = await warehouseApi.listInventory(
+      warehouseId!,
+      term,
+      undefined,
+      true,
+    );
     const map = new Map<
       string,
       {

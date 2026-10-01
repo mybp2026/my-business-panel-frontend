@@ -73,10 +73,12 @@ export const warehouseApi = {
     warehouseId: string,
     search?: string,
     groupId?: string,
+    includeCatalog?: boolean,
   ): Promise<InventoryItem[]> {
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     if (groupId) params.set("group_id", groupId);
+    if (includeCatalog) params.set("include_catalog", "true");
     const qs = params.toString() ? `?${params.toString()}` : "";
     const res = await fetch(`${url}/warehouse/inventory/${warehouseId}${qs}`, {
       method: "GET",
