@@ -9,7 +9,6 @@ import { defaultPaymentMethod } from "./hooks/usePaymentSplits";
 
 interface ValidateSaleParams {
   hasCustomer: boolean;
-  isWalkInSale: boolean;
   branchId: string;
   cashRegisterId: string;
   itemsCount: number;
@@ -29,7 +28,6 @@ interface ValidateSaleParams {
 // Returns a user-facing error message, or null when the sale is ready to submit.
 export function validateSale({
   hasCustomer,
-  isWalkInSale,
   branchId,
   cashRegisterId,
   itemsCount,
@@ -45,8 +43,11 @@ export function validateSale({
   dueDate,
   currencySymbol,
 }: ValidateSaleParams): string | null {
-  const hasCustomerOrWalkIn = hasCustomer || isWalkInSale;
-  if (!hasCustomerOrWalkIn || !branchId || !cashRegisterId || itemsCount === 0) {
+  if (!hasCustomer) {
+    return "Toda venta requiere un cliente registrado con sus datos completos";
+  }
+
+  if (!branchId || !cashRegisterId || itemsCount === 0) {
     return "Complete los datos antes de procesar la venta";
   }
 
@@ -106,7 +107,7 @@ interface BuildSalePayloadParams {
   cashRegisterId: string;
   cashRegisterSessionId: string;
   currencyId: number;
-  customerId: string | null;
+  customerId: string;
   saleCondition: string;
   isApartado: boolean;
   isCredit: boolean;
@@ -232,7 +233,7 @@ export function buildSalePayload({
       const rows = [];
       if (usePoints && actualPointsRedeemed > 0 && pointsCoveredDisplay > 0) {
         rows.push({
-          tenant_customer_id: customerId ?? null,
+          tenant_customer_id: customerId,
           payment_method_id:
             paymentSplits[0]?.methodId ?? defaultPaymentMethod.value,
           is_points_redemption: true,
@@ -252,7 +253,7 @@ export function buildSalePayload({
             ? Math.round(amount * pointsRate)
             : 0;
           rows.push({
-            tenant_customer_id: customerId ?? null,
+            tenant_customer_id: customerId,
             payment_method_id: split.methodId,
             is_points_redemption: isLoyaltyMethod,
             points_redeemed: splitPointsRedeemed,

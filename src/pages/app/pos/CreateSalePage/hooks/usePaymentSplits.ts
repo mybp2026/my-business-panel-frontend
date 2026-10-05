@@ -19,7 +19,6 @@ const initialSplit = (): PaymentSplit => ({
 interface UsePaymentSplitsParams {
   totalAmountDisplay: number;
   targetPayment: number;
-  isWalkInSale: boolean;
 }
 
 export interface UsePaymentSplitsResult {
@@ -44,7 +43,6 @@ export interface UsePaymentSplitsResult {
 export function usePaymentSplits({
   totalAmountDisplay,
   targetPayment,
-  isWalkInSale,
 }: UsePaymentSplitsParams): UsePaymentSplitsResult {
   const [paymentSplits, setPaymentSplits] = useState<PaymentSplit[]>([
     initialSplit(),
@@ -65,14 +63,12 @@ export function usePaymentSplits({
     if (isPartialPayment) {
       setSinglePaymentManuallyEdited(false);
       setPaymentSplits(
-        paymentMethods
-          .filter((m) => !(m.code === "loyalty_points" && isWalkInSale))
-          .map((m) => ({
-            id: `split-${m.value}`,
-            methodId: m.value,
-            amount: "",
-            currencyId: VES_CURRENCY_ID,
-          })),
+        paymentMethods.map((m) => ({
+          id: `split-${m.value}`,
+          methodId: m.value,
+          amount: "",
+          currencyId: VES_CURRENCY_ID,
+        })),
       );
       return;
     }

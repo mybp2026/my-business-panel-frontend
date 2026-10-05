@@ -13,6 +13,7 @@ import { useUniqueAvailability } from "@/hooks/useUniqueAvailability";
 
 import { identificationTypes } from "@/constants/identification-types";
 import { defaultCustomerSegments } from "@/constants/default-customer-segments";
+import { isLegalPersonTypeId } from "@/utils/customerInvoice";
 
 import type { Customer } from "@/interfaces/entities/Customer.interface";
 import type { Tenant } from "@/interfaces/entities/Tenant.interface";
@@ -67,6 +68,7 @@ export function CustomerUpsertModal({
         ? {
             first_name: customer.first_name,
             last_name: customer.last_name,
+            business_name: customer.business_name ?? "",
             document_type_id: customer.identification_type,
             document_number: customer.document_number,
             birthdate: customer.birthdate ?? "",
@@ -83,6 +85,7 @@ export function CustomerUpsertModal({
         : {
             first_name: "",
             last_name: "",
+            business_name: "",
             document_type_id: 1,
             document_number: "",
             birthdate: "",
@@ -107,6 +110,8 @@ export function CustomerUpsertModal({
     : isSuperAdmin
       ? watchedTenantId || ""
       : currentTenantId;
+
+  const showBusinessName = isLegalPersonTypeId(watch("document_type_id"));
 
   const watchedDoc = watch("document_number") ?? "";
   const watchedEmail = watch("email") ?? "";
@@ -231,9 +236,10 @@ export function CustomerUpsertModal({
       onUpdate(customer.customer_id, {
         first_name: data.first_name,
         last_name: data.last_name,
+        business_name: data.business_name?.trim() || undefined,
         email: data.email || undefined,
         phone: data.phone || undefined,
-        address: data.address || undefined,
+        address: data.address,
         city: data.city || undefined,
         province: data.province || undefined,
         postal_code: data.postal_code || undefined,
@@ -244,13 +250,14 @@ export function CustomerUpsertModal({
         tenant_id: isSuperAdmin ? (data.tenant_id || "") : currentTenantId,
         first_name: data.first_name,
         last_name: data.last_name,
+        business_name: data.business_name?.trim() || undefined,
         document_type_id: data.document_type_id,
         document_number: data.document_number,
         birthdate: data.birthdate || undefined,
         economic_activity: data.economic_activity || undefined,
         email: data.email || undefined,
         phone: data.phone || undefined,
-        address: data.address || undefined,
+        address: data.address,
         city: data.city || undefined,
         province: data.province || undefined,
         postal_code: data.postal_code || undefined,
@@ -308,6 +315,17 @@ export function CustomerUpsertModal({
             {...register("last_name")}
           />
         </div>
+
+        {showBusinessName && (
+          <Input
+            label="Razón social"
+            placeholder="Ej: Distribuidora Oriental, C.A."
+            hint="Se imprime en la factura en lugar del nombre y apellido"
+            error={errors.business_name?.message}
+            required
+            {...register("business_name")}
+          />
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <Controller
@@ -376,6 +394,9 @@ export function CustomerUpsertModal({
         <Input
           label="Dirección"
           placeholder="Calle principal, número 123"
+          hint="Domicilio del comprador: se imprime en la factura"
+          error={errors.address?.message}
+          required
           {...register("address")}
         />
 

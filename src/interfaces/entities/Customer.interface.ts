@@ -7,6 +7,8 @@ export interface Customer {
   tenant_id: string;
   first_name: string;
   last_name: string;
+  /** Razon social; se imprime en la factura cuando el cliente es J/G/C. */
+  business_name?: string | null;
   identification_type: number;
   document_number: string;
   econ_activity?: string;

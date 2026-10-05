@@ -35,7 +35,7 @@ export interface SaleItemPayload {
 }
 
 export interface SalePaymentPayload {
-  /** Optional: walk-in / anonymous sales record payments without a customer. */
+  /** El pago pertenece a la venta, que ahora siempre tiene cliente. */
   tenant_customer_id?: string | null;
   payment_method_id: number;
   is_points_redemption: boolean;
@@ -79,6 +79,8 @@ export interface InvoicePayment {
 
 export interface InvoiceInfo {
   invoice_id: string;
+  /** Correlativo de 8 digitos por tenant (00055703). Null en facturas anteriores a la migracion 040. */
+  invoice_number: string | null;
   subtotal_amount: number;
   tax_amount: number;
   total_amount: number;
@@ -90,9 +92,11 @@ export interface InvoiceInfo {
   ad_message: string | null;
   due_date: string | null;
   invoiced_at: string;
-  /** Null for walk-in/anonymous sales */
+  /** Null solo en facturas historicas de ventas anonimas (anteriores a la migracion 040). */
   first_name: string | null;
   last_name: string | null;
+  /** Razon social; reemplaza a nombre y apellido cuando el cliente es J/G/C. */
+  business_name: string | null;
   document_number: string | null;
   email: string | null;
   customer_econ_activity: string | null;

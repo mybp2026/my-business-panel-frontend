@@ -4,6 +4,7 @@ import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
 import { IconCheckCircle } from "@/assets/icons";
 import type { InvoiceInfo } from "@/interfaces/entities/Sale.interface";
 import { usePrintInvoice } from "@/hooks/usePrintInvoice";
+import { customerDisplayName } from "@/utils/customerInvoice";
 import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
 
 interface PaymentSplit {
@@ -169,10 +170,10 @@ export function SaleResultModal({
 
             {hasCustomer && (
               <Section title="Cliente">
-                {(digitalInvoice.first_name || digitalInvoice.last_name) && (
+                {customerDisplayName(digitalInvoice) && (
                   <Row
-                    label="Nombre"
-                    value={`${digitalInvoice.first_name ?? ""} ${digitalInvoice.last_name ?? ""}`.trim()}
+                    label={digitalInvoice.business_name ? "Razón social" : "Nombre"}
+                    value={customerDisplayName(digitalInvoice)}
                   />
                 )}
                 {digitalInvoice.document_number && (
@@ -221,6 +222,9 @@ export function SaleResultModal({
                 label="Fecha de venta"
                 value={fmtDate(digitalInvoice.sale_date)}
               />
+              {digitalInvoice.invoice_number && (
+                <Row label="Factura N°" value={digitalInvoice.invoice_number} />
+              )}
               <Row
                 label="Fecha de factura"
                 value={fmtDate(digitalInvoice.invoiced_at)}

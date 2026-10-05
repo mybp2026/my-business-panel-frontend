@@ -3,14 +3,13 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { IconPlus, IconUser } from "@/assets/icons";
+import { customerDisplayName, isLegalPersonTypeId } from "@/utils/customerInvoice";
 
 import type { CustomerLookupSectionProps } from "./CustomerLookupSectionProps";
 
 export function CustomerLookupSection({
   customer,
   step,
-  isWalkInSale,
-  isApartado,
   documentTypes,
   lookup,
 }: CustomerLookupSectionProps) {
@@ -18,6 +17,7 @@ export function CustomerLookupSection({
     lookupForm,
     inlineCustomerForm,
     showInlineCreate,
+    customerToComplete,
     isLookingUp,
     isCreatingCustomer,
     inlineDocStatus,
@@ -26,11 +26,14 @@ export function CustomerLookupSection({
     inlineUniquenessBlocked,
     inlineUniquenessProbing,
     handleInlineCreate,
-    startWalkInSale,
     changeCustomer,
     cancelInlineCreate,
-    cancelWalkIn,
   } = lookup;
+
+  const isCompleting = customerToComplete !== null;
+  const showBusinessName = isLegalPersonTypeId(
+    inlineCustomerForm.watch("document_type_id"),
+  );
 
   return (
     <div className="bg-white rounded-2xl border border-gray-300 p-6 mb-6">
@@ -43,14 +46,9 @@ export function CustomerLookupSection({
             Listo
           </Badge>
         )}
-        {isWalkInSale && step === "items" && (
-          <Badge variant="yellow" className="ml-2">
-            Venta de mostrador
-          </Badge>
-        )}
       </div>
 
-      {!customer && !isWalkInSale && (
+      {!customer && (
         <div className="flex flex-col md:flex-row md:items-end gap-3">
           <div className="flex-1">
             <Input
@@ -58,30 +56,14 @@ export function CustomerLookupSection({
               placeholder="Ej: 105550987"
               {...lookupForm.register("document_number")}
               error={lookupForm.formState.errors.document_number?.message}
-              hint={isLookingUp ? "Buscando cliente…" : undefined}
+              hint={
+                isLookingUp
+                  ? "Buscando cliente…"
+                  : "Toda venta se factura a un cliente registrado"
+              }
               required
             />
           </div>
-          {!isApartado && (
-            <Button type="button" variant="ghost" onClick={startWalkInSale}>
-              Continuar sin cliente
-            </Button>
-          )}
-        </div>
-      )}
-
-      {isWalkInSale && !customer && (
-        <div className="mt-2 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <IconUser />
-          <div className="flex-1">
-            <p className="font-semibold text-amber-900">Venta de mostrador</p>
-            <p className="text-xs text-amber-700">
-              No se asociará ningún cliente a esta venta.
-            </p>
-          </div>
-          <Button variant="ghost" size="sm" onClick={cancelWalkIn}>
-            Cambiar
-          </Button>
         </div>
       )}
 
@@ -90,6 +72,12 @@ export function CustomerLookupSection({
           onSubmit={inlineCustomerForm.handleSubmit(handleInlineCreate)}
           className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-100 pt-6"
         >
+          {isCompleting && (
+            <p className="md:col-span-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+              Este cliente ya existe pero le faltan datos obligatorios para
+              facturar. Complételos para continuar con la venta.
+            </p>
+          )}
           <Input
             label="Nombre"
             {...inlineCustomerForm.register("first_name")}
@@ -115,10 +103,12 @@ export function CustomerLookupSection({
               value: String(t.identification_type_id),
               label: `${t.type_name} (${t.ident_code})`,
             }))}
+            disabled={isCompleting}
             required
           />
           <Input
             label="Número de documento"
+            disabled={isCompleting}
             {...inlineCustomerForm.register("document_number")}
             error={
               inlineCustomerForm.formState.errors.document_number?.message ??
@@ -135,6 +125,28 @@ export function CustomerLookupSection({
             }
             required
           />
+          {showBusinessName && (
+            <div className="md:col-span-2">
+              <Input
+                label="Razón social"
+                placeholder="Ej: Distribuidora Oriental, C.A."
+                hint="Se imprime en la factura en lugar del nombre y apellido"
+                {...inlineCustomerForm.register("business_name")}
+                error={inlineCustomerForm.formState.errors.business_name?.message}
+                required
+              />
+            </div>
+          )}
+          <div className="md:col-span-2">
+            <Input
+              label="Dirección"
+              placeholder="Domicilio del comprador"
+              hint="Se imprime en la factura"
+              {...inlineCustomerForm.register("address")}
+              error={inlineCustomerForm.formState.errors.address?.message}
+              required
+            />
+          </div>
           <Input
             label="Email"
             type="email"
@@ -194,8 +206,12 @@ export function CustomerLookupSection({
                     : undefined
               }
             >
-              {!isCreatingCustomer && <IconPlus />}
-              {isCreatingCustomer ? "Creando..." : "Crear cliente y continuar"}
+              {!isCreatingCustomer && !isCompleting && <IconPlus />}
+              {isCreatingCustomer
+                ? "Guardando..."
+                : isCompleting
+                  ? "Guardar datos y continuar"
+                  : "Crear cliente y continuar"}
             </Button>
           </div>
         </form>
@@ -206,12 +222,15 @@ export function CustomerLookupSection({
           <IconUser />
           <div className="flex-1">
             <p className="font-semibold text-emerald-900">
-              {customer.first_name} {customer.last_name}
+              {customerDisplayName(customer)}
             </p>
             <p className="text-xs text-emerald-700">
               Doc. {customer.document_number}{" "}
               {customer.email ? `· ${customer.email}` : ""}
             </p>
+            {customer.address && (
+              <p className="text-xs text-emerald-700">{customer.address}</p>
+            )}
           </div>
           <Button variant="ghost" size="sm" onClick={changeCustomer}>
             Cambiar

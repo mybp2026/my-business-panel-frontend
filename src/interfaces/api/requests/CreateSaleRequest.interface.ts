@@ -7,8 +7,8 @@ export interface CreateSaleRequest {
   tenant_id: string;
   branch_id: string;
   currency_id: number;
-  /** Optional: walk-in / anonymous sales pueden omitir el cliente. */
-  tenant_customer_id?: string | null;
+  /** Obligatorio: la venta anonima ya no existe (migracion 040). */
+  tenant_customer_id: string;
   /** Used by the backend to link the sale to the active cash register session. */
   cash_register_id?: string;
   /** Stored directly on digital_sale_invoice for session traceability. */

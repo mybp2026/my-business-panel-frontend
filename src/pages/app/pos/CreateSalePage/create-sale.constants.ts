@@ -16,10 +16,12 @@ export const round2 = (value: number) => Number(value.toFixed(2));
 export const blankCustomer = (): InlineCustomerForm => ({
   first_name: "",
   last_name: "",
+  business_name: "",
   document_type_id: 1,
   document_number: "",
   email: "",
   phone: "",
+  address: "",
 });
 
 export const buildVariantLabel = (selection: ProductVariantSelection) =>

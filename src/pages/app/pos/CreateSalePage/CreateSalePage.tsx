@@ -122,13 +122,11 @@ function CreateSalePageContent({
 
   const [step, setStep] = useState<"lookup" | "items">("lookup");
   const [customer, setCustomer] = useState<Customer | null>(null);
-  const [isWalkInSale, setIsWalkInSale] = useState(false);
 
   const lookup = useCustomerLookup({
     tenantId,
     setStep,
     setCustomer,
-    setIsWalkInSale,
     showToast,
   });
 
@@ -179,7 +177,6 @@ function CreateSalePageContent({
   const paymentSplits = usePaymentSplits({
     totalAmountDisplay: calc.totalAmountDisplay,
     targetPayment,
-    isWalkInSale,
   });
 
   const exchangeRatesForSplits = useSplitExchangeRates(
@@ -511,7 +508,6 @@ function CreateSalePageContent({
   const handleSubmitSale = async () => {
     const error = validateSale({
       hasCustomer: Boolean(customer),
-      isWalkInSale,
       branchId,
       cashRegisterId: cashRegisters.cashRegisterId,
       itemsCount: items.length,
@@ -532,9 +528,12 @@ function CreateSalePageContent({
       return;
     }
 
+    // validateSale ya rechaza la venta sin cliente; esto solo acota el tipo.
+    if (!customer) return;
+
     setIsSubmitting(true);
 
-    const customerId = customer?.customer_id ?? null;
+    const customerId = customer.customer_id;
     const payload = buildSalePayload({
       tenantId,
       branchId,
@@ -617,7 +616,6 @@ function CreateSalePageContent({
     setResultModal((prev) => ({ ...prev, open: false }));
     setStep("lookup");
     setCustomer(null);
-    setIsWalkInSale(false);
     setItems([]);
     setLastItemAmount(0);
     setAppliedPromotion(null);
@@ -643,9 +641,10 @@ function CreateSalePageContent({
     value: c.condition_code,
     label: `${c.condition_code} — ${c.condition_desc}`,
   }));
-  const paymentOptions = paymentMethods
-    .filter((m) => !(m.code === "loyalty_points" && isWalkInSale))
-    .map((m) => ({ value: String(m.value), label: m.label }));
+  const paymentOptions = paymentMethods.map((m) => ({
+    value: String(m.value),
+    label: m.label,
+  }));
   const cashRegisterOptions = cashRegisters.cashRegisters.map((register) => ({
     value: register.cash_register_id,
     label: register.register_name || register.cash_register_id,
@@ -682,8 +681,6 @@ function CreateSalePageContent({
           <CustomerLookupSection
             customer={customer}
             step={step}
-            isWalkInSale={isWalkInSale}
-            isApartado={isApartado}
             documentTypes={documentTypes}
             lookup={lookup}
           />
@@ -710,7 +707,6 @@ function CreateSalePageContent({
         calc={calc}
         effectiveExchangeRate={effectiveExchangeRate}
         customer={customer}
-        isWalkInSale={isWalkInSale}
         onAddRoyaltyItems={handleAddRoyaltyItems}
         onQuantityChange={handleQuantityChange}
         onRemoveItem={handleRemoveItem}
@@ -783,7 +779,7 @@ function CreateSalePageContent({
               onClick={handleSubmitSale}
               loading={isSubmitting}
               disabled={
-                (!customer && !isWalkInSale) ||
+                !customer ||
                 items.length === 0 ||
                 !branchId ||
                 !cashRegisters.cashRegisterId ||
