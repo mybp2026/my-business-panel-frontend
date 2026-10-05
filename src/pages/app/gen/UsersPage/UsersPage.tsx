@@ -18,7 +18,13 @@ import { Table, Pagination } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
 import { Toast } from "@/components/ui/Toast";
 import { PageHeaderBanner } from "@/components/layout/PageHeaderBanner";
-import { IconEdit, IconEye, IconPlus, IconTrash } from "@/assets/icons";
+import {
+  IconEdit,
+  IconEye,
+  IconPlus,
+  IconShield,
+  IconTrash,
+} from "@/assets/icons";
 
 import type { User } from "@/interfaces/entities/User.interface";
 import type { Role } from "@/interfaces/entities/Role.interface";
@@ -28,10 +34,13 @@ import type { ToastMode } from "@/interfaces/components/ui/ToastProps.interface"
 
 import { UserDetailModal } from "./UserDetailModal";
 import { UserUpsertModal } from "./UserUpsertModal";
+import { ResetPasswordModal } from "./ResetPasswordModal";
 
 import { getRoleName } from "@/utils/getRoleName";
 
 const LIMIT = 100;
+const ADMIN_ROLE_ID = 2;
+const EMPLOYEE_ROLE_ID = 4;
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -49,6 +58,8 @@ function UsersPageContent({ initialUsers }: UsersPageLoaderData) {
   const { user: currentUser } = useAuth();
   const canManageUsers =
     currentUser?.role.role_id === 1 || currentUser?.role.role_id === 2;
+  // Solo admin (role_id 2) restablece claves de empleados; el backend lo exige igual.
+  const canResetPasswords = currentUser?.role.role_id === ADMIN_ROLE_ID;
 
   const [users, setUsers] = useState<User[]>(initialUsers?.users ?? []),
     [roles, setRoles] = useState<Role[]>([]),
@@ -57,7 +68,8 @@ function UsersPageContent({ initialUsers }: UsersPageLoaderData) {
     [total, setTotal] = useState(initialUsers?.total ?? 0),
     [isModalOpen, setIsModalOpen] = useState(false),
     [selectedUser, setSelectedUser] = useState<User | null>(null),
-    [editingUser, setEditingUser] = useState<User | null>(null);
+    [editingUser, setEditingUser] = useState<User | null>(null),
+    [passwordUser, setPasswordUser] = useState<User | null>(null);
 
   const { page, limit, setPage, handleLimitChange } = useTableQuery({
     initialPage: initialUsers?.page ?? 1,
@@ -283,6 +295,16 @@ function UsersPageContent({ initialUsers }: UsersPageLoaderData) {
                         >
                           <IconEdit />
                         </Button>
+                        {canResetPasswords && row.role_id === EMPLOYEE_ROLE_ID && (
+                          <Button
+                            onClick={() => setPasswordUser(row)}
+                            title="Cambiar contraseña"
+                            variant="ghost"
+                            className="hover:bg-gray-50 rounded-lg transition-colors"
+                          >
+                            <IconShield />
+                          </Button>
+                        )}
                         {row.role_id !== 1 && row.role_id !== 2 && (
                           <Button
                             onClick={() => handleDeleteUser(row.user_id)}
@@ -320,6 +342,20 @@ function UsersPageContent({ initialUsers }: UsersPageLoaderData) {
           user={selectedUser}
           roles={roles}
           onClose={() => setSelectedUser(null)}
+        />
+      )}
+
+      {passwordUser && (
+        <ResetPasswordModal
+          user={passwordUser}
+          onClose={() => setPasswordUser(null)}
+          onSubmit={async (userId, newPassword) => {
+            await userApi.resetEmployeePassword(userId, newPassword);
+            setToast({
+              mode: "success",
+              message: "Contraseña actualizada exitosamente",
+            });
+          }}
         />
       )}
 

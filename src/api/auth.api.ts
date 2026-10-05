@@ -112,8 +112,17 @@ export const authApi = {
         }),
       });
 
-      const json: ApiResponse<{ message: string }> = await response.json();
-      return json.data;
+      const json = await response.json();
+
+      if (!response.ok) {
+        const message = json?.message ?? json?.error;
+        throw new Error(
+          (Array.isArray(message) ? message.join(", ") : message) ||
+            "Error al cambiar contraseña",
+        );
+      }
+
+      return (json as ApiResponse<{ message: string }>).data;
     } catch (error) {
       throw new Error(
         error instanceof Error ? error.message : "Error al cambiar contraseña",

@@ -151,6 +151,29 @@ export const userApi = {
     }
   },
 
+  /** Solo admin: restablece la clave de un empleado de su tenant. */
+  async resetEmployeePassword(
+    userId: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    const response = await fetch(`${url}/user/${userId}/password`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ new_password: newPassword }),
+    });
+
+    const json = await response.json();
+
+    if (!response.ok) {
+      const message =
+        json?.message ?? json?.error ?? "Error al cambiar la contraseña";
+      throw new Error(Array.isArray(message) ? message.join(", ") : message);
+    }
+
+    return (json as ApiResponse<{ message: string }>).data;
+  },
+
   async delete(userId: string): Promise<{ message: string }> {
     try {
       const response = await fetch(`${url}/user/${userId}`, {

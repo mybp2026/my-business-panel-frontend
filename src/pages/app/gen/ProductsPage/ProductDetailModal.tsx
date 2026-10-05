@@ -1,6 +1,9 @@
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import type { Product } from "@/interfaces/entities/Product.interface";
+import { useDisplayCurrency } from "@/context/CurrencyContext";
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
+import { formatBs, formatUsd, usdToBs } from "@/utils/dualCurrency";
 
 export function ProductDetailModal({
   product,
@@ -9,6 +12,16 @@ export function ProductDetailModal({
   product: Product;
   onClose: () => void;
 }) {
+  const { displayCurrency } = useDisplayCurrency();
+  const displayRate = useCurrentExchangeRate();
+  // El catalogo persiste en USD: se muestra en la moneda del toggle global.
+  const formatCatalogUsd = (usd: number): string => {
+    if (displayCurrency === "VES" && displayRate) {
+      return formatBs(usdToBs(usd, displayRate) ?? 0);
+    }
+    return formatUsd(usd);
+  };
+
   const field = (label: string, value?: string | number | boolean | null) => {
     const display =
       typeof value === "boolean"
@@ -59,16 +72,14 @@ export function ProductDetailModal({
             {field("Proveedor", pv.supplier_name)}
             {field(
               "Costo unitario",
-              pv.cost_price != null
-                ? `Bs. ${Number(pv.cost_price).toLocaleString("es-VE")}`
-                : null,
+              pv.cost_price != null ? formatCatalogUsd(Number(pv.cost_price)) : null,
             )}
             {field(
               "Precio de venta",
               pv.unit_price != null
-                ? `Bs. ${Number(pv.unit_price).toLocaleString("es-VE")}`
+                ? formatCatalogUsd(Number(pv.unit_price))
                 : pv.price != null
-                  ? `Bs. ${Number(pv.price).toLocaleString("es-VE")}`
+                  ? formatCatalogUsd(Number(pv.price))
                   : null,
             )}
             {field(

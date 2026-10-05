@@ -15,6 +15,10 @@ import type { UpdateProductRequest } from "@/interfaces/api/requests/UpdateProdu
 import { productCompositionApi } from "@/api/productComposition.api";
 import { purchaseApi } from "@/api/purchase.api";
 import type { Supplier } from "@/interfaces/entities/Purchase.interface";
+import { useDisplayCurrency } from "@/context/CurrencyContext";
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
+import { formatBs, formatUsd, usdToBs } from "@/utils/dualCurrency";
+import { TAX_RATE } from "@/pages/app/pos/CreateSalePage/create-sale.constants";
 
 interface BulkPackageModalProps {
   isOpen: boolean;
@@ -93,11 +97,13 @@ export function BulkPackageModal({
   onEditSuccess,
 }: BulkPackageModalProps) {
   const isEdit = mode === "edit";
+  const { displayCurrency } = useDisplayCurrency();
+  const exchangeRate = useCurrentExchangeRate();
   const [parent, setParent] = useState<ParentForm>(EMPTY_PARENT);
   const [parentGroupIds, setParentGroupIds] = useState<string[]>([]);
-  const [parentAttributes, setParentAttributes] = useState<AttributeAssignmentRow[]>(
-    [],
-  );
+  const [parentAttributes, setParentAttributes] = useState<
+    AttributeAssignmentRow[]
+  >([]);
   const [useParentSkuAsPrefix, setUseParentSkuAsPrefix] = useState(true);
   const [componentCount, setComponentCount] = useState(0);
   const [components, setComponents] = useState<ComponentForm[]>([
@@ -194,9 +200,7 @@ export function BulkPackageModal({
             selected_value_ids: [a.attribute_value_id],
           })) ?? [],
         );
-        setIsGiftable(
-          (parentData as { giftable?: boolean }).giftable ?? false,
-        );
+        setIsGiftable((parentData as { giftable?: boolean }).giftable ?? false);
         setIsIncludesIva(
           (parentData as { includes_iva?: boolean }).includes_iva ?? false,
         );
@@ -247,11 +251,24 @@ export function BulkPackageModal({
         });
         setComponents(rows);
         setComponentCount(rows.length);
+
+        // El modal permanece montado y `mode` cambia despues del primer render,
+        // asi que el valor inicial de useUniformPricing no sirve aqui. Si todos
+        // los componentes comparten precio y costo, se precargan los inputs
+        // uniformes; si no, se muestran los valores de cada componente.
+        const allSame =
+          rows.length > 0 &&
+          rows.every(
+            (r) =>
+              r.unit_price === rows[0].unit_price &&
+              r.cost_price === rows[0].cost_price,
+          );
+        setUseUniformPricing(allSame);
+        setUniformPrice(allSame ? rows[0].unit_price : "");
+        setUniformCost(allSame ? rows[0].cost_price : "");
       } catch (e) {
         if (!cancelled) {
-          setError(
-            e instanceof Error ? e.message : "Error al cargar el lote",
-          );
+          setError(e instanceof Error ? e.message : "Error al cargar el lote");
         }
       } finally {
         if (!cancelled) setLoadingEdit(false);
@@ -443,7 +460,9 @@ export function BulkPackageModal({
       giftable: isGiftable,
       includes_iva: isIncludesIva,
       group_ids: parentGroupIds,
-      attribute_value_ids: parentAttributes.flatMap((r) => r.selected_value_ids),
+      attribute_value_ids: parentAttributes.flatMap(
+        (r) => r.selected_value_ids,
+      ),
     };
 
     await productApi.update(editingProductId, parentUpdate);
@@ -720,7 +739,8 @@ export function BulkPackageModal({
               disabled={submitting}
             />
             <span className="text-sm text-gray-700 font-medium">
-              El precio de venta ya incluye IVA (aplica al lote y a todos sus componentes)
+              El precio de venta ya incluye IVA (aplica al lote y a todos sus
+              componentes)
             </span>
           </label>
 
@@ -730,8 +750,8 @@ export function BulkPackageModal({
               Familias y dimensiones <span className="text-red-600">*</span>
             </p>
             <p className="text-xs text-gray-500">
-              Obligatorio: los grupos asignados al lote se heredan en todos
-              los productos simples que lo componen.
+              Obligatorio: los grupos asignados al lote se heredan en todos los
+              productos simples que lo componen.
             </p>
             {tenantId ? (
               <GroupAssignmentEditor
@@ -948,7 +968,10 @@ export function BulkPackageModal({
         {/* ─── Resumen ────────────────────────────────────────────────── */}
         {components.length > 0 &&
           (() => {
-            const totalSalePrice = components.reduce((acc, c) => {
+            // Precios y costos del catalogo se capturan en USD. Si el precio
+            // ya incluye IVA, el IVA es una porcion del precio y el margen se
+            // calcula sobre la base sin IVA; si no, el IVA se suma encima.
+            const enteredPrice = components.reduce((acc, c) => {
               const price = useUniformPricing
                 ? parseFloat(uniformPrice) || 0
                 : parseFloat(c.unit_price) || 0;
@@ -960,11 +983,41 @@ export function BulkPackageModal({
                 : parseFloat(c.cost_price) || 0;
               return acc + cost * (parseFloat(c.quantity_per_parent) || 0);
             }, 0);
-            const margin = totalSalePrice - totalCost;
+            const basePrice = isIncludesIva
+              ? enteredPrice / (1 + TAX_RATE)
+              : enteredPrice;
+            const ivaAmount = isIncludesIva
+              ? enteredPrice - basePrice
+              : enteredPrice * TAX_RATE;
+            const finalPrice = basePrice + ivaAmount;
+            const margin = basePrice - totalCost;
             const marginPercent =
-              totalSalePrice > 0
-                ? ((margin / totalSalePrice) * 100).toFixed(1)
-                : 0;
+              basePrice > 0 ? ((margin / basePrice) * 100).toFixed(1) : "0.0";
+
+            const showVes = displayCurrency === "VES" && exchangeRate;
+            const fmt = (usd: number) =>
+              showVes
+                ? formatBs(usdToBs(usd, exchangeRate) ?? 0)
+                : formatUsd(usd);
+
+            const cells: Array<{ label: string; value: string }> = [
+              {
+                label: isIncludesIva
+                  ? "Precio base (sin IVA)"
+                  : "Precio de venta (sin IVA)",
+                value: fmt(basePrice),
+              },
+              {
+                label: `IVA (${(TAX_RATE * 100).toFixed(0)}%)${isIncludesIva ? " incluido" : ""}`,
+                value: fmt(ivaAmount),
+              },
+              { label: "Precio final (con IVA)", value: fmt(finalPrice) },
+              { label: "Costo total", value: fmt(totalCost) },
+              {
+                label: "Margen (sobre precio sin IVA)",
+                value: `${fmt(margin)} (${marginPercent}%)`,
+              },
+            ];
 
             return (
               <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 space-y-3">
@@ -973,37 +1026,15 @@ export function BulkPackageModal({
                     Resumen del lote:
                   </span>
                 </div>
-                <div className="grid grid-cols-3 gap-4 text-right">
-                  <div>
-                    <p className="text-xs text-blue-500">
-                      Precio de venta total
-                    </p>
-                    <p className="font-semibold text-blue-900">
-                      Bs.
-                      {totalSalePrice.toLocaleString("es-VE", {
-                        minimumFractionDigits: 2,
-                      })}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-blue-500">Costo total</p>
-                    <p className="font-semibold text-blue-900">
-                      Bs.
-                      {totalCost.toLocaleString("es-VE", {
-                        minimumFractionDigits: 2,
-                      })}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-blue-500">Margen</p>
-                    <p className="font-semibold text-blue-900">
-                      Bs.
-                      {margin.toLocaleString("es-VE", {
-                        minimumFractionDigits: 2,
-                      })}{" "}
-                      ({marginPercent}%)
-                    </p>
-                  </div>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-right">
+                  {cells.map((cell) => (
+                    <div key={cell.label}>
+                      <p className="text-xs text-blue-500">{cell.label}</p>
+                      <p className="font-semibold text-blue-900">
+                        {cell.value}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
             );
@@ -1011,32 +1042,22 @@ export function BulkPackageModal({
 
         {error && <p className="text-sm font-medium text-red-600">{error}</p>}
 
-        <div className="flex gap-3 pt-2 border-t border-gray-100">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={close}
-            disabled={submitting}
-          >
-            Cancelar
-          </Button>
-          <div className="flex-1" />
-          <Button
-            type="button"
-            variant="primary"
-            onClick={handleSubmit}
-            loading={submitting}
-            disabled={components.length === 0 || submitting || loadingEdit}
-          >
-            {submitting
-              ? isEdit
-                ? "Guardando..."
-                : "Creando lote..."
-              : isEdit
-                ? `Guardar lote (${components.length} producto${components.length === 1 ? "" : "s"})`
-                : `Crear lote y ${components.length} producto${components.length === 1 ? "" : "s"}`}
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="primary"
+          onClick={handleSubmit}
+          loading={submitting}
+          disabled={components.length === 0 || submitting || loadingEdit}
+          className="self-end"
+        >
+          {submitting
+            ? isEdit
+              ? "Guardando..."
+              : "Creando lote..."
+            : isEdit
+              ? `Guardar lote (${components.length} producto${components.length === 1 ? "" : "s"})`
+              : `Crear lote y ${components.length} producto${components.length === 1 ? "" : "s"}`}
+        </Button>
       </div>
     </Modal>
   );
