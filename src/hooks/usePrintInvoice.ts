@@ -164,11 +164,16 @@ export function buildInvoiceHtml(data: PrintInvoiceData): string {
   // invoice_number es null en facturas anteriores a la migracion 040: se
   // omite la linea en vez de imprimir un numero inventado.
   const numberBlock = inv
-    ? (inv.seller_email ? field("Usuario", esc(inv.seller_email)) : "") +
+    ? (inv.cash_register_name
+        ? field("Usuario", esc(inv.cash_register_name))
+        : "") +
       (inv.invoice_number
         ? row("FACTURA:", `<strong>${esc(inv.invoice_number)}</strong>`)
         : "") +
-      row("FECHA: " + fmtDateDashed(inv.invoiced_at), "HORA: " + fmtTime(inv.invoiced_at))
+      row(
+        "FECHA: " + fmtDateDashed(inv.invoiced_at),
+        "HORA: " + fmtTime(inv.invoiced_at),
+      )
     : "";
 
   // Datos propios de mybp que el modelo fiscal no tiene.
@@ -178,8 +183,7 @@ export function buildInvoiceHtml(data: PrintInvoiceData): string {
         ? row("Fecha venta", fmtDateDashed(inv.sale_date))
         : "") +
       (inv.due_date ? row("Vence", fmtDateOnly(inv.due_date)) : "") +
-      row("Moneda", esc(inv.currency_code ?? "—")) +
-      (saleId ? `<div class="mono-tiny">ID: ${esc(saleId)}</div>` : "")
+      row("Moneda", esc(inv.currency_code ?? "—"))
     : "";
 
   // ---- Items: "cant x unitario" arriba, nombre + total a la derecha -------
@@ -215,7 +219,10 @@ export function buildInvoiceHtml(data: PrintInvoiceData): string {
     .sort(([a], [b]) => a - b)
     .map(
       ([rate, v]) =>
-        row(`BI ${rate.toLocaleString("es-VE", { minimumFractionDigits: 2 })}%`, fmt(v.base, symbol)) +
+        row(
+          `BI ${rate.toLocaleString("es-VE", { minimumFractionDigits: 2 })}%`,
+          fmt(v.base, symbol),
+        ) +
         (rate > 0
           ? row(
               `IVA ${rate.toLocaleString("es-VE", { minimumFractionDigits: 2 })}%`,
@@ -408,7 +415,6 @@ export function buildInvoiceHtml(data: PrintInvoiceData): string {
     ${totalsBlock}
     ${loyaltyHtml}
     ${inv?.ad_message ? `<div class="ad">${esc(inv.ad_message)}</div>` : ""}
-    <div class="footer">¡Gracias por su compra!</div>
   </div>
   <div class="no-print">
     <button onclick="window.print()">Imprimir</button>
