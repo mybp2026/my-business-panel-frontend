@@ -26,6 +26,7 @@ export function CustomerLookupSection({
     inlineUniquenessBlocked,
     inlineUniquenessProbing,
     handleInlineCreate,
+    handleInlineInvalid,
     changeCustomer,
     cancelInlineCreate,
   } = lookup;
@@ -69,7 +70,10 @@ export function CustomerLookupSection({
 
       {showInlineCreate && !customer && (
         <form
-          onSubmit={inlineCustomerForm.handleSubmit(handleInlineCreate)}
+          onSubmit={inlineCustomerForm.handleSubmit(
+            handleInlineCreate,
+            handleInlineInvalid,
+          )}
           className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-100 pt-6"
         >
           {isCompleting && (
