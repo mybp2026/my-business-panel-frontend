@@ -7,6 +7,7 @@ import type { LoginResponse } from "@/interfaces/api/responses/LoginResponse.int
 import type { CurrentUserResponse } from "@/interfaces/api/responses/CurrentUserResponse.interface";
 import { UnauthorizedError } from "./errors/UnauthorizedError";
 import { NetworkError } from "./errors/NetworkError";
+import { refreshSession } from "./refreshSession";
 
 export const HAS_SESSION_KEY = "has_session";
 
@@ -65,13 +66,21 @@ export const authApi = {
   },
 
   async getCurrentUser(): Promise<CurrentUserResponse> {
-    let response: Response;
-    try {
-      response = await fetch(`${url}/user`, {
+    const request = () =>
+      fetch(`${url}/user`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
       });
+
+    let response: Response;
+    try {
+      response = await request();
+      // El access token dura 15 min: al reabrir la app puede haber expirado
+      // aunque el refresh token siga vigente. Se intenta renovar una vez.
+      if (response.status === 401 && (await refreshSession())) {
+        response = await request();
+      }
     } catch {
       // fetch nunca llego a completarse (offline, backend caido): no es un
       // 401 real, no debe forzar cierre de sesion.
