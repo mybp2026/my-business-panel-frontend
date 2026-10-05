@@ -6,8 +6,6 @@ import type { UseCustomerLookupResult } from "../../hooks/useCustomerLookup";
 export interface CustomerLookupSectionProps {
   customer: Customer | null;
   step: "lookup" | "items";
-  isWalkInSale: boolean;
-  isApartado: boolean;
   documentTypes: DocumentType[];
   lookup: UseCustomerLookupResult;
 }

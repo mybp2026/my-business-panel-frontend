@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
 import { usePrintInvoice } from "@/hooks/usePrintInvoice";
+import { customerDisplayName } from "@/utils/customerInvoice";
 import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
 import { CreditDebitNotesSection } from "./CreditDebitNotesSection";
 import {
@@ -249,14 +250,20 @@ export function SaleDetailModal({
               <p className="text-sm text-gray-400">Cargando…</p>
             ) : digitalInvoice ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 border border-gray-200 rounded-xl p-4">
+                {digitalInvoice.invoice_number && (
+                  <Field
+                    label="Factura N°"
+                    value={digitalInvoice.invoice_number}
+                  />
+                )}
                 <Field
                   label="Fecha de factura"
                   value={formatDateTime(digitalInvoice.invoiced_at)}
                 />
-                {(digitalInvoice.first_name || digitalInvoice.last_name) && (
+                {customerDisplayName(digitalInvoice) && (
                   <Field
-                    label="Cliente"
-                    value={`${digitalInvoice.first_name ?? ""} ${digitalInvoice.last_name ?? ""}`.trim()}
+                    label={digitalInvoice.business_name ? "Razón social" : "Cliente"}
+                    value={customerDisplayName(digitalInvoice)}
                   />
                 )}
                 {digitalInvoice.document_number && (

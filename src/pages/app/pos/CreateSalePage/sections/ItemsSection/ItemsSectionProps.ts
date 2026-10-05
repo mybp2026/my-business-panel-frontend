@@ -28,7 +28,6 @@ export interface ItemsSectionProps {
   calc: UseSaleCalculationsResult;
   effectiveExchangeRate: number;
   customer: Customer | null;
-  isWalkInSale: boolean;
   onAddRoyaltyItems: (items: CartItem[]) => void;
   onQuantityChange: (itemId: string, newQty: number) => void;
   onRemoveItem: (id: string) => void;

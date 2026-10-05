@@ -8,8 +8,12 @@ import {
   useUniqueAvailability,
   type UniqueAvailabilityStatus,
 } from "@/hooks/useUniqueAvailability";
-import { createCustomer } from "@/router/actions/customer.actions";
+import {
+  createCustomer,
+  updateCustomer,
+} from "@/router/actions/customer.actions";
 import { getCustomerByDocNumber } from "@/router/loaders/customer.loaders";
+import { customerDisplayName, missingInvoiceFields } from "@/utils/customerInvoice";
 import type { Customer } from "@/interfaces/entities/Customer.interface";
 import type { ToastMode } from "@/interfaces/components/ui/ToastProps.interface";
 
@@ -25,7 +29,6 @@ interface UseCustomerLookupParams {
   tenantId: string;
   setStep: (step: "lookup" | "items") => void;
   setCustomer: (customer: Customer | null) => void;
-  setIsWalkInSale: (value: boolean) => void;
   showToast: (mode: ToastMode, message: string) => void;
 }
 
@@ -33,6 +36,11 @@ export interface UseCustomerLookupResult {
   lookupForm: ReturnType<typeof useForm<CustomerLookupForm>>;
   inlineCustomerForm: ReturnType<typeof useForm<InlineCustomerForm>>;
   showInlineCreate: boolean;
+  /**
+   * Cliente existente al que le faltan datos para facturar. Mientras esta
+   * seteado el formulario inline actualiza ese cliente en lugar de crear uno.
+   */
+  customerToComplete: Customer | null;
   isLookingUp: boolean;
   isCreatingCustomer: boolean;
   inlineDocStatus: UniqueAvailabilityStatus;
@@ -41,17 +49,25 @@ export interface UseCustomerLookupResult {
   inlineUniquenessBlocked: boolean;
   inlineUniquenessProbing: boolean;
   handleInlineCreate: (data: InlineCustomerForm) => Promise<void>;
-  startWalkInSale: () => void;
   changeCustomer: () => void;
   cancelInlineCreate: () => void;
-  cancelWalkIn: () => void;
 }
+
+const toInlineForm = (customer: Customer): InlineCustomerForm => ({
+  first_name: customer.first_name ?? "",
+  last_name: customer.last_name ?? "",
+  business_name: customer.business_name ?? "",
+  document_type_id: customer.identification_type,
+  document_number: customer.document_number,
+  email: customer.email ?? "",
+  phone: customer.phone ?? "",
+  address: customer.address ?? "",
+});
 
 export function useCustomerLookup({
   tenantId,
   setStep,
   setCustomer,
-  setIsWalkInSale,
   showToast,
 }: UseCustomerLookupParams): UseCustomerLookupResult {
   const lookupForm = useForm<CustomerLookupForm>({
@@ -68,12 +84,19 @@ export function useCustomerLookup({
   });
 
   const [showInlineCreate, setShowInlineCreateState] = useState(false);
+  const [customerToComplete, setCustomerToComplete] = useState<Customer | null>(
+    null,
+  );
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
 
   const inlineDoc = inlineCustomerForm.watch("document_number") ?? "";
   const inlineEmail = inlineCustomerForm.watch("email") ?? "";
   const inlinePhone = inlineCustomerForm.watch("phone") ?? "";
+
+  // Al completar un cliente existente sus propios datos no cuentan como
+  // duplicados: se excluye su id de las sondas de unicidad.
+  const excludeId = customerToComplete?.customer_id;
 
   const checkInlineDoc = useCallback(
     async (value: string) => {
@@ -82,10 +105,11 @@ export function useCustomerLookup({
         tenantId,
         field: "document_number",
         value,
+        excludeId,
       });
       return exists;
     },
-    [tenantId],
+    [tenantId, excludeId],
   );
 
   const checkInlineEmail = useCallback(
@@ -95,10 +119,11 @@ export function useCustomerLookup({
         tenantId,
         field: "email",
         value,
+        excludeId,
       });
       return exists;
     },
-    [tenantId],
+    [tenantId, excludeId],
   );
 
   const checkInlinePhone = useCallback(
@@ -108,10 +133,11 @@ export function useCustomerLookup({
         tenantId,
         field: "phone",
         value,
+        excludeId,
       });
       return exists;
     },
-    [tenantId],
+    [tenantId, excludeId],
   );
 
   const inlineDocStatus = useUniqueAvailability(inlineDoc, checkInlineDoc, {
@@ -152,46 +178,58 @@ export function useCustomerLookup({
     const trimmed = debouncedDocNumber.trim();
     if (trimmed.length < 3) {
       setShowInlineCreateState(false);
+      setCustomerToComplete(null);
       return;
     }
 
     let cancelled = false;
     setIsLookingUp(true);
 
+    const openCreateForm = () => {
+      setCustomerToComplete(null);
+      inlineCustomerForm.reset({
+        ...blankCustomer(),
+        document_number: trimmed,
+      });
+      setShowInlineCreateState(true);
+      showToast(
+        "info",
+        "Cliente no encontrado. Complete los datos para crearlo.",
+      );
+    };
+
     getCustomerByDocNumber(trimmed)
       .then((found) => {
         if (cancelled) return;
-        if (found && (found as Customer).document_number) {
-          setCustomer(found);
-          setShowInlineCreateState(false);
-          setStep("items");
-          showToast(
-            "success",
-            `Cliente encontrado: ${found.first_name} ${found.last_name}`,
-          );
-        } else {
-          inlineCustomerForm.reset({
-            ...blankCustomer(),
-            document_number: trimmed,
-          });
+        if (!found || !(found as Customer).document_number) {
+          openCreateForm();
+          return;
+        }
+
+        // La factura exige los datos del comprador: un cliente existente al
+        // que le falta direccion o razon social no pasa a la venta hasta
+        // completarlos.
+        const missing = missingInvoiceFields(found);
+        if (missing.length > 0) {
+          setCustomerToComplete(found);
+          inlineCustomerForm.reset(toInlineForm(found));
           setShowInlineCreateState(true);
           showToast(
             "info",
-            "Cliente no encontrado. Complete los datos para crearlo.",
+            `Complete los datos del cliente para facturar. Falta: ${missing.join(", ")}.`,
           );
+          return;
         }
+
+        setCustomerToComplete(null);
+        setCustomer(found);
+        setShowInlineCreateState(false);
+        setStep("items");
+        showToast("success", `Cliente encontrado: ${customerDisplayName(found)}`);
       })
       .catch(() => {
         if (cancelled) return;
-        inlineCustomerForm.reset({
-          ...blankCustomer(),
-          document_number: trimmed,
-        });
-        setShowInlineCreateState(true);
-        showToast(
-          "info",
-          "Cliente no encontrado. Complete los datos para crearlo.",
-        );
+        openCreateForm();
       })
       .finally(() => {
         if (!cancelled) setIsLookingUp(false);
@@ -221,58 +259,74 @@ export function useCustomerLookup({
     }
     setIsCreatingCustomer(true);
     try {
-      const created = await createCustomer({
-        tenant_id: tenantId,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        document_type_id: Number(data.document_type_id),
-        document_number: data.document_number,
-        email: data.email || undefined,
-        phone: data.phone || undefined,
-        segment_id: 4,
-      });
-      setCustomer(created);
+      let saved: Customer;
+
+      if (customerToComplete) {
+        const updated = await updateCustomer(customerToComplete.customer_id, {
+          first_name: data.first_name,
+          last_name: data.last_name,
+          business_name: data.business_name?.trim() || undefined,
+          email: data.email || undefined,
+          phone: data.phone || undefined,
+          address: data.address,
+        });
+        if (!updated?.customer_id) {
+          throw new Error("No se pudo actualizar el cliente");
+        }
+        saved = { ...customerToComplete, ...updated };
+      } else {
+        saved = await createCustomer({
+          tenant_id: tenantId,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          business_name: data.business_name?.trim() || undefined,
+          document_type_id: Number(data.document_type_id),
+          document_number: data.document_number,
+          email: data.email || undefined,
+          phone: data.phone || undefined,
+          address: data.address,
+          segment_id: 4,
+        });
+      }
+
+      setCustomer(saved);
+      setCustomerToComplete(null);
       setShowInlineCreateState(false);
       setStep("items");
-      showToast("success", "Cliente creado correctamente");
+      showToast(
+        "success",
+        customerToComplete
+          ? "Datos del cliente actualizados"
+          : "Cliente creado correctamente",
+      );
     } catch (err) {
       showToast(
         "error",
-        err instanceof Error ? err.message : "Error al crear cliente",
+        err instanceof Error ? err.message : "Error al guardar el cliente",
       );
     } finally {
       setIsCreatingCustomer(false);
     }
   };
 
-  const startWalkInSale = () => {
-    setIsWalkInSale(true);
-    setShowInlineCreateState(false);
-    setStep("items");
-    showToast(
-      "info",
-      "Venta de mostrador (sin cliente). Los puntos de fidelidad no aplican.",
-    );
-  };
-
   const changeCustomer = () => {
     setCustomer(null);
+    setCustomerToComplete(null);
     setStep("lookup");
     setShowInlineCreateState(false);
     lookupForm.reset({ document_number: "" });
   };
 
-  const cancelInlineCreate = () => setShowInlineCreateState(false);
-
-  const cancelWalkIn = () => {
-    setIsWalkInSale(false);
-    setStep("lookup");
+  const cancelInlineCreate = () => {
+    setShowInlineCreateState(false);
+    setCustomerToComplete(null);
   };
 
   return {
     lookupForm,
     inlineCustomerForm,
     showInlineCreate,
+    customerToComplete,
     isLookingUp,
     isCreatingCustomer,
     inlineDocStatus,
@@ -281,9 +335,7 @@ export function useCustomerLookup({
     inlineUniquenessBlocked,
     inlineUniquenessProbing,
     handleInlineCreate,
-    startWalkInSale,
     changeCustomer,
     cancelInlineCreate,
-    cancelWalkIn,
   };
 }

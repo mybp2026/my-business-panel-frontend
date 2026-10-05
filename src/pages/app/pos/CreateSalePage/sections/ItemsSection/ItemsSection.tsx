@@ -33,7 +33,6 @@ export function ItemsSection({
   calc,
   effectiveExchangeRate,
   customer,
-  isWalkInSale,
   onAddRoyaltyItems,
   onQuantityChange,
   onRemoveItem,
@@ -270,7 +269,7 @@ export function ItemsSection({
 
       <div className="mt-4">
         <RoyaltyPanel
-          customer={isWalkInSale ? null : customer}
+          customer={customer}
           tenantId={tenantId}
           totalAmount={totalAmount}
           onAddItems={onAddRoyaltyItems}
