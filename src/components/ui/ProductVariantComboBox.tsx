@@ -113,6 +113,16 @@ export function ProductVariantComboBox({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Con hideOutOfStock las variantes sin stock no se listan; el contador debe
+  // reflejar lo que realmente se muestra, no lo que devolvio el backend.
+  const visibleVariants = variants.filter((v) => {
+    if (!hideOutOfStock || !warehouseId) return true;
+    const id = getVariantId(v);
+    if (!id) return true;
+    return (getStockForVariant(id) ?? 0) > 0;
+  });
+  const hiddenOutOfStock = variants.length - visibleVariants.length;
+
   // Event handlers
   const handleOpen = useCallback(() => {
     if (disabled) return;
@@ -291,7 +301,11 @@ export function ProductVariantComboBox({
             <p className="mt-1 text-xs text-gray-400">
               {isLoading
                 ? "Buscando..."
-                : `${variants.length} resultado${variants.length !== 1 ? "s" : ""}`}
+                : `${visibleVariants.length} resultado${visibleVariants.length !== 1 ? "s" : ""}${
+                    hiddenOutOfStock > 0
+                      ? ` (${hiddenOutOfStock} sin stock en esta bodega)`
+                      : ""
+                  }`}
             </p>
           </div>
 
@@ -309,24 +323,19 @@ export function ProductVariantComboBox({
               </li>
             )}
 
-            {!isLoading && !searchError && variants.length === 0 && (
+            {!isLoading && !searchError && visibleVariants.length === 0 && (
               <li className="px-4 py-4 text-center text-sm text-gray-500">
-                {searchTerm.trim()
-                  ? `Sin resultados para "${searchTerm.trim()}"`
-                  : "No hay productos para mostrar"}
+                {hiddenOutOfStock > 0
+                  ? "Los productos encontrados no tienen stock en esta bodega. Registre una recepción de mercancía o un ajuste de inventario."
+                  : searchTerm.trim()
+                    ? `Sin resultados para "${searchTerm.trim()}"`
+                    : "No hay productos para mostrar"}
               </li>
             )}
 
             {!isLoading &&
               !searchError &&
-              variants
-                .filter((v) => {
-                  if (!hideOutOfStock || !warehouseId) return true;
-                  const id = getVariantId(v);
-                  if (!id) return true;
-                  const stock = getStockForVariant(id);
-                  return (stock ?? 0) > 0;
-                })
+              visibleVariants
                 .map((variant) => {
                   const id = getVariantId(variant);
                   const isSelected = !!id && id === value;

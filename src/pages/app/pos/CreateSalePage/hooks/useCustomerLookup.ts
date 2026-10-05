@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { customerApi } from "@/api/customer.api";
@@ -49,6 +49,7 @@ export interface UseCustomerLookupResult {
   inlineUniquenessBlocked: boolean;
   inlineUniquenessProbing: boolean;
   handleInlineCreate: (data: InlineCustomerForm) => Promise<void>;
+  handleInlineInvalid: (errors: FieldErrors<InlineCustomerForm>) => void;
   changeCustomer: () => void;
   cancelInlineCreate: () => void;
 }
@@ -57,7 +58,7 @@ const toInlineForm = (customer: Customer): InlineCustomerForm => ({
   first_name: customer.first_name ?? "",
   last_name: customer.last_name ?? "",
   business_name: customer.business_name ?? "",
-  document_type_id: customer.identification_type,
+  document_type_id: Number(customer.identification_type),
   document_number: customer.document_number,
   email: customer.email ?? "",
   phone: customer.phone ?? "",
@@ -309,6 +310,18 @@ export function useCustomerLookup({
     }
   };
 
+  // Campos sin input propio (tipo de documento) o con el error fuera de vista
+  // dejaban el submit en silencio: se avisa con el primer mensaje de error.
+  const handleInlineInvalid = (errors: FieldErrors<InlineCustomerForm>) => {
+    const [field, error] = Object.entries(errors)[0] ?? [];
+    showToast(
+      "error",
+      error?.message
+        ? String(error.message)
+        : `Revise el campo "${field ?? "del cliente"}" antes de continuar`,
+    );
+  };
+
   const changeCustomer = () => {
     setCustomer(null);
     setCustomerToComplete(null);
@@ -335,6 +348,7 @@ export function useCustomerLookup({
     inlineUniquenessBlocked,
     inlineUniquenessProbing,
     handleInlineCreate,
+    handleInlineInvalid,
     changeCustomer,
     cancelInlineCreate,
   };
