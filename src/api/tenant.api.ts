@@ -11,8 +11,9 @@ import type { TenantListResponse } from "@/interfaces/api/responses/TenantListRe
 export const tenantApi = {
   async create(data: NewTenantRequest): Promise<Tenant> {
     try {
-      const response = await fetch(`${url}/tenant`, {
+      const response = await fetch(`${url}/tenant/bare`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -82,6 +83,7 @@ export const tenantApi = {
         `${url}/tenant?page=${page}&limit=${limit}`,
         {
           method: "GET",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -101,6 +103,7 @@ export const tenantApi = {
     try {
       const response = await fetch(`${url}/tenant/${tenantId}`, {
         method: "GET",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -122,6 +125,7 @@ export const tenantApi = {
     try {
       const response = await fetch(`${url}/tenant/${tenantId}`, {
         method: "PATCH",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -141,6 +145,7 @@ export const tenantApi = {
     try {
       const response = await fetch(`${url}/tenant/${tenantId}`, {
         method: "DELETE",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -165,6 +170,7 @@ export const tenantApi = {
         `${url}/tenant/${tenantId}/users?page=${page}&limit=${limit}`,
         {
           method: "GET",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -190,6 +196,7 @@ export const tenantApi = {
         `${url}/tenant/search?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`,
         {
           method: "GET",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
