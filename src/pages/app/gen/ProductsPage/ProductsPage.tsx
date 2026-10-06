@@ -24,8 +24,11 @@ import { Table, Pagination } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
 import { Toast } from "@/components/ui/Toast";
 import { PageHeaderBanner } from "@/components/layout/PageHeaderBanner";
+import { DualCurrencyAmount } from "@/components/ui/DualCurrencyAmount";
+import { useDisplayCurrency } from "@/context/CurrencyContext";
+import { useCurrentExchangeRate } from "@/hooks/useCurrentExchangeRate";
 
-import { IconEdit, IconEye, IconPlus, IconTrash } from "@/assets/icons";
+import { IconEdit, IconPlus, IconTrash } from "@/assets/icons";
 
 import type { Product } from "@/interfaces/entities/Product.interface";
 import type { CreateProductRequest } from "@/interfaces/api/requests/CreateProductRequest.interface";
@@ -84,6 +87,11 @@ function ProductsPageContent({
   const isSuperAdmin = currentUser?.role.role_id === 1;
   const canManageProducts = isSuperAdmin || currentUser?.role.role_id === 2;
   const tenantId = currentUser?.tenant.tenant_id ?? "";
+  // Toggle universal de moneda (header): el catalogo persiste en USD y la
+  // tabla lo muestra en la moneda elegida con la tasa vigente del tenant.
+  const { displayCurrency } = useDisplayCurrency();
+  const displayRate = useCurrentExchangeRate();
+  const currencyLabel = displayCurrency === "VES" ? "Bs." : "USD";
 
   // ─── Product list state ────────────────────────────────────────────────────
 
@@ -248,7 +256,12 @@ function ProductsPageContent({
   useEffect(() => {
     setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearchQuery, filterGroupId, filterAttributeValueId, filterNoSupplier]);
+  }, [
+    debouncedSearchQuery,
+    filterGroupId,
+    filterAttributeValueId,
+    filterNoSupplier,
+  ]);
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -674,12 +687,15 @@ function ProductsPageContent({
             },
             {
               key: "cost_price" as keyof Product,
-              label: "Costo (USD)",
+              label: `Costo (${currencyLabel})`,
               width: "14%",
               render: (_: unknown, row: Product) => {
                 const cost = (row as ProductWithVariant).cost_price;
                 return cost != null ? (
-                  `$ ${Number(cost).toLocaleString("es-VE", { minimumFractionDigits: 2 })}`
+                  <DualCurrencyAmount
+                    amountUsd={Number(cost)}
+                    rate={displayRate}
+                  />
                 ) : (
                   <span className="text-gray-400 text-xs">—</span>
                 );
@@ -687,10 +703,14 @@ function ProductsPageContent({
             },
             {
               key: "price" as keyof Product,
-              label: "Precio venta (USD)",
+              label: `Precio venta (${currencyLabel})`,
               width: "14%",
-              render: (_: unknown, row: Product) =>
-                `$ ${getProductPrice(row as ProductWithVariant).toLocaleString("es-VE", { minimumFractionDigits: 2 })}`,
+              render: (_: unknown, row: Product) => (
+                <DualCurrencyAmount
+                  amountUsd={getProductPrice(row as ProductWithVariant)}
+                  rate={displayRate}
+                />
+              ),
             },
             ...(isSuperAdmin
               ? [
@@ -712,16 +732,6 @@ function ProductsPageContent({
                   className="flex gap-2"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Button
-                    onClick={() =>
-                      setSelectedProduct(row as ProductWithVariant)
-                    }
-                    title="Ver detalles"
-                    variant="ghost"
-                    className="hover:bg-gray-50 rounded-lg transition-colors"
-                  >
-                    <IconEye />
-                  </Button>
                   {canManageProducts && (
                     <>
                       <Button

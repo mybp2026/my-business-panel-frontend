@@ -48,8 +48,8 @@ export function ProfilePage() {
 
     if (!passwordFormData.newPassword) {
       errors.newPassword = "Nueva contraseña es requerida";
-    } else if (passwordFormData.newPassword.length < 6) {
-      errors.newPassword = "Contraseña debe tener al menos 6 caracteres";
+    } else if (passwordFormData.newPassword.length < 8) {
+      errors.newPassword = "Contraseña debe tener al menos 8 caracteres";
     }
 
     if (passwordFormData.newPassword !== passwordFormData.confirmPassword) {
